@@ -20,13 +20,13 @@
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test:shell": "node scripts/run-bats.js test/shell/*.bats",
-    "prepublishOnly": "node scripts/prepublish-check.js && pnpm run build",
+    "prepublishOnly": "node scripts/prepublish-check.js && npm run build",
     "postinstall": "node scripts/postinstall.js"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,mjs,cjs,json,md,yaml,yml}": "prettier --write"
   },
-  "packageManager": "pnpm@10.18.3",
+
   "engines": { "node": ">=20" },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
