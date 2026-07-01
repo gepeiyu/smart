@@ -1,0 +1,41 @@
+{
+  "version": "0.4.0",
+  "skills": [
+    "smart/SKILL.md",
+    "smart/reference/auto-transition.md",
+    "smart/reference/smart-yaml-fields.md",
+    "smart/reference/context-recovery.md",
+    "smart/reference/debug-gate.md",
+    "smart/reference/decision-point.md",
+    "smart/reference/dirty-worktree.md",
+    "smart/reference/file-structure.md",
+    "smart/reference/subagent-dispatch.md",
+    "smart/scripts/smart-env.sh",
+    "smart/scripts/smart-guard.sh",
+    "smart/scripts/smart-state.sh",
+    "smart/scripts/smart-handoff.sh",
+    "smart/scripts/smart-archive.sh",
+    "smart/scripts/smart-yaml-validate.sh",
+    "smart/scripts/smart-hook-guard.sh",
+    "smart-issue/SKILL.md",
+    "smart-design/SKILL.md",
+    "smart-build/SKILL.md",
+    "smart-verify/SKILL.md",
+    "smart-archive/SKILL.md",
+    "smart-hotfix/SKILL.md",
+    "smart-tweak/SKILL.md"
+  ],
+  "rules": [
+    "smart/rules/smart-phase-guard.md"
+  ],
+  "hooks": {
+    "smart/scripts/smart-hook-guard.sh": {
+      "matcher": "Write|Edit",
+      "description": "Block code writes in wrong Smart phase (issue/design/archive)"
+    }
+  },
+  "languages": [
+    { "id": "en", "name": "English", "skillsDir": "skills" },
+    { "id": "zh", "name": "中文", "skillsDir": "skills-zh" }
+  ]
+}

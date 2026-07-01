@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+h1 { color: #58a6ff; margin-bottom: 0.5rem; }
+h2 { color: #8b949e; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.5rem; }
+.meta { color: #8b949e; font-size: 0.85rem; margin-bottom: 1.5rem; }
+.stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.stat { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; flex: 1; }
+.stat-value { font-size: 1.5rem; font-weight: 600; color: #58a6ff; }
+.stat-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
+.change { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; }
+.change-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.change-name { font-weight: 600; color: #c9d1d9; }
+.badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.badge-open { background: #1f6feb; color: #fff; }
+.badge-design { background: #8957e5; color: #fff; }
+.badge-build { background: #d29922; color: #fff; }
+.badge-verify { background: #f0883e; color: #fff; }
+.badge-archive { background: #3fb950; color: #fff; }
+.badge-unknown { background: #30363d; color: #8b949e; }
+.badge-fail { background: #da3633; color: #fff; }
+.badge-pass { background: #3fb950; color: #fff; }
+.change-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #8b949e; }
+.error { color: #da3633; }
+.warning { color: #d29922; }
+.info { color: #58a6ff; }
+.risk-list { margin-top: 0.5rem; }
+.risk-item { font-size: 0.85rem; padding: 0.2rem 0; }
+.next { margin-top: 0.5rem; padding: 0.5rem; background: #0d1117; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
+.git { margin-top: 1rem; padding: 1rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
+.git-row { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.85rem; }
+.loading { color: #8b949e; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>Smart Dashboard</h1>
+<div class="meta" id="meta"></div>
+<div class="stats" id="stats"></div>
+<h2>Active Changes</h2>
+<div id="active-changes"><p class="loading">Loading...</p></div>
+<h2>Archived Changes</h2>
+<div id="archived-changes"><p class="loading">Loading...</p></div>
+<h2>Git Status</h2>
+<div class="git" id="git-status"><p class="loading">Loading...</p></div>
+
+<script>
+async function load() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('active-changes').innerHTML = '<p class="error">Failed to load dashboard data.</p>';
+  }
+}
+
+function render(data) {
+  document.getElementById('meta').textContent = `Project: ${data.project.name}  |  Generated: ${new Date(data.project.generatedAt).toLocaleString()}`;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-value">${data.summary.activeChanges}</div><div class="stat-label">Active Changes</div></div>
+    <div class="stat"><div class="stat-value">${data.summary.archivedChanges}</div><div class="stat-label">Archived</div></div>
+    <div class="stat"><div class="stat-value">${data.summary.verifyFailed}</div><div class="stat-label">Verify Failed</div></div>
+    <div class="stat"><div class="stat-value">${data.summary.dirtyFiles}</div><div class="stat-label">Dirty Files</div></div>
+  `;
+
+  document.getElementById('active-changes').innerHTML = data.changes.active.length === 0
+    ? '<p class="loading">No active changes.</p>'
+    : data.changes.active.map(renderChange).join('');
+
+  document.getElementById('archived-changes').innerHTML = data.changes.archived.length === 0
+    ? '<p class="loading">No archived changes.</p>'
+    : data.changes.archived.map(renderChange).join('');
+
+  const git = data.git;
+  document.getElementById('git-status').innerHTML = `
+    <div class="git-row"><strong>Branch:</strong> ${git.branch || 'N/A'}</div>
+    <div class="git-row"><strong>HEAD:</strong> ${git.head || 'N/A'}</div>
+    <div class="git-row"><strong>Dirty files:</strong> ${git.dirtyFiles}</div>
+    ${git.recentCommits.length > 0 ? '<div class="git-row"><strong>Recent commits:</strong></div>' + git.recentCommits.map(c => '<div class="git-row" style="font-family:monospace;font-size:0.8rem;color:#8b949e;">' + c + '</div>').join('') : ''}
+  `;
+}
+
+function renderChange(c) {
+  const phaseBadge = `badge-${c.phase}`;
+  const verifyBadge = c.verify.result === 'fail' ? 'badge-fail' : c.verify.result === 'pass' ? 'badge-pass' : '';
+  return `<div class="change">
+    <div class="change-header">
+      <span class="change-name">${c.displayName}</span>
+      <span>
+        <span class="badge ${phaseBadge}">${c.phase}</span>
+        ${c.workflow ? `<span class="badge badge-unknown">${c.workflow}</span>` : ''}
+        ${verifyBadge ? `<span class="badge ${verifyBadge}">${c.verify.result}</span>` : ''}
+      </span>
+    </div>
+    <div class="change-meta">
+      <span>Tasks: ${c.tasks.completed}/${c.tasks.total}</span>
+      ${c.updatedAt ? `<span>Updated: ${new Date(c.updatedAt).toLocaleString()}</span>` : ''}
+    </div>
+    ${c.risks.length > 0 ? `<div class="risk-list">${c.risks.map(r => `<div class="risk-item ${r.level}">${r.level === 'error' ? '✗' : r.level === 'warning' ? '⚠' : 'ℹ'} ${r.message}</div>`).join('')}</div>` : ''}
+    ${c.next ? `<div class="next">→ ${c.next.command || c.next.description}</div>` : ''}
+  </div>`;
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
