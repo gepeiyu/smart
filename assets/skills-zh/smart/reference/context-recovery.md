@@ -18,7 +18,7 @@ Smart 的核心价值之一是 Agent 中断后自动恢复进度。通过 `.smar
 
 | 阶段 | 恢复点 | 前置条件 |
 |------|--------|---------|
-| `open` | 需求澄清 | 产物不存在时重新开始 |
+| `issue` | 需求澄清 | 产物不存在时重新开始 |
 | `design` | Brainstorm / Design Doc | 读取 brainstorm-summary.md（如存在）|
 | `build` | 未完成任务 | 读取 tasks.md 找到未勾选任务 |
 | `verify` | 验证 | 读取 handoff_hash 检测漂移 |

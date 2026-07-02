@@ -10,7 +10,7 @@ description: Smart 微调预设 — 跳过 Brainstorming 和 Plan，轻量 Build
 微调（Tweak）预设用于小型调整，跳过 Brainstorming 和 Plan 阶段，使用轻量验证。
 
 ```
-/smart-tweak: open → light build → light verify → archive
+/smart-tweak: issue → light build → light verify → archive
 ```
 
 ## 差异
@@ -35,7 +35,7 @@ description: Smart 微调预设 — 跳过 Brainstorming 和 Plan，轻量 Build
 ```yaml
 # .smart.yaml
 workflow: tweak
-phase: open
+phase: issue
 auto_transition: true
 build_mode: direct
 verify_mode: light
@@ -44,7 +44,7 @@ verify_mode: light
 ## 状态转换
 
 ```
-open ──open-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
+issue ──issue-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
 ```
 
 ## 参考

@@ -10,7 +10,7 @@ description: Smart 热修复预设 — 跳过 Brainstorming，直接进入 Build
 热修复（Hotfix）预设用于紧急缺陷修复，跳过 Brainstorming 阶段。
 
 ```
-/smart-hotfix: open → build → verify → archive
+/smart-hotfix: issue → build → verify → archive
 ```
 
 ## 差异
@@ -35,14 +35,14 @@ description: Smart 热修复预设 — 跳过 Brainstorming，直接进入 Build
 ```yaml
 # .smart.yaml
 workflow: hotfix
-phase: open
+phase: issue
 auto_transition: true
 ```
 
 ## 状态转换
 
 ```
-open ──open-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
+issue ──issue-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
 ```
 
 ## 参考

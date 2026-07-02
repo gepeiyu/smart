@@ -87,8 +87,8 @@ fi
 # Archive phase: no code writes allowed
 
 case "$CURRENT_PHASE" in
-  open|design)
-    # In open/design phase, code file writes are blocked
+  issue|design)
+    # In issue/design phase, code file writes are blocked
     echo "BLOCKED: Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'." >&2
     echo "Allowed paths: openspec/*  docs/superpowers/*  .smart/*  .claude/*" >&2
     echo "Use /smart-issue or /smart-design phase commands." >&2

@@ -53,7 +53,7 @@ export async function statusCommand(targetPath: string, opts?: Record<string, un
     if (yaml) {
       activeChanges.push({
         name,
-        phase: yaml.phase || 'open',
+        phase: yaml.phase || 'issue',
         workflow: yaml.workflow || 'full',
         issue: yaml.issue_number || '',
         title: yaml.issue_title || '',

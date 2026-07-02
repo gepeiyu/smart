@@ -37,7 +37,7 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
   echo "  task-checkoff <file> <task-text>  Verify task checkoff"
   echo "  next <change-name>          Resolve next action"
   echo ""
-  echo "Transitions: open-complete, design-complete, build-complete,"
+  echo "Transitions: issue-complete, design-complete, build-complete,"
   echo "             verify-pass, verify-fail, archived, archive-reopen"
   echo ""
   echo "Workflows: full, hotfix, tweak"
@@ -48,9 +48,9 @@ SUBCOMMAND="$1"
 shift
 
 # ── Constants ──────────────────────────────────────────────────────────
-VALID_PHASES="open design build verify archive"
+VALID_PHASES="issue design build verify archive"
 VALID_WORKFLOWS="full hotfix tweak"
-VALID_TRANSITIONS="open-complete design-complete build-complete verify-pass verify-fail archived archive-reopen"
+VALID_TRANSITIONS="issue-complete design-complete build-complete verify-pass verify-fail archived archive-reopen"
 VALID_BUILD_MODES="subagent-driven-development executing-plans direct"
 VALID_ISOLATION_MODES="branch worktree"
 VALID_TDD_MODES="tdd direct"
@@ -163,7 +163,7 @@ cmd_init() {
   cat > "$smart_file" <<-EOF
 # Smart workflow state
 workflow: full
-phase: open
+phase: issue
 auto_transition: true
 build_mode: null
 isolation: null
@@ -273,9 +273,9 @@ cmd_transition() {
   current_phase="$(_read_yaml "phase" "$smart_file")"
 
   case "$current_phase:$transition" in
-    open:open-complete)
+    issue:issue-complete)
       _write_field "phase" "design" "$smart_file"
-      echo "TRANSITION: open → design (open-complete)"
+      echo "TRANSITION: issue → design (issue-complete)"
       ;;
     design:design-complete)
       _write_field "phase" "build" "$smart_file"
@@ -351,8 +351,8 @@ cmd_check() {
     errors="${errors}  - Invalid phase: ${phase}\n"
     issues=$((issues + 1))
     if [ $recover -eq 1 ]; then
-      _write_field "phase" "open" "$smart_file"
-      echo "  RECOVER: reset phase to 'open'" >&2
+      _write_field "phase" "issue" "$smart_file"
+      echo "  RECOVER: reset phase to 'issue'" >&2
     fi
   fi
 
@@ -479,7 +479,7 @@ cmd_next() {
   fi
 
   case "$phase" in
-    open)
+    issue)
       echo "auto:smart-design"
       ;;
     design)

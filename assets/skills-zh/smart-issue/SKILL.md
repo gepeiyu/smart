@@ -16,7 +16,7 @@ description: Smart Issue 阶段 — 需求澄清、PRD 拆分、变更创建
 3. **PRD 拆分预检** — 大 PRD 自动分流为多个变更
 4. **变更创建** — 执行 `openspec new change` 创建变更目录
 5. **产物生成** — 使用 OpenSpec 逐 artifact JSON 指令生成 proposal.md / design.md / tasks.md
-6. **守卫验证** — 验证 artifacts 存在，执行 `guard --apply open-complete`
+6. **守卫验证** — 验证 artifacts 存在，执行 `guard --apply issue-complete`
 
 ## 产物
 
@@ -25,11 +25,11 @@ description: Smart Issue 阶段 — 需求澄清、PRD 拆分、变更创建
 | `proposal.md` | 变更提案文档 |
 | `design.md` | 设计方案文档 |
 | `tasks.md` | 任务清单 |
-| `.smart.yaml` | Smart 状态文件（phase=open）|
+| `.smart.yaml` | Smart 状态文件（phase=issue）|
 
 ## 守卫条件
 
-`open-complete` 转换要求：
+`issue-complete` 转换要求：
 - `proposal.md` 存在
 - `tasks.md` 存在
 

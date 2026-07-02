@@ -62,7 +62,7 @@ prd/
 
 | 概念 | 定义位置 | 一句话 |
 |------|---------|--------|
-| Phase | 03 | 5 个阶段：open → design → build → verify → archive |
+| Phase | 03 | 5 个阶段：issue → design → build → verify → archive |
 | State Machine | 03 | `.smart.yaml` 驱动的状态转换，守卫验证通过才允许 |
 | Guard | 03/05 | 阶段退出的硬校验条件（文件存在、状态正确）|
 | Handoff | 03/05 | 阶段间上下文传递（设计→构建的 SHA256 完整性包）|

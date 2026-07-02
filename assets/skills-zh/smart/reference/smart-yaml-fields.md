@@ -4,7 +4,7 @@
 
 ```yaml
 workflow: full                    # full | hotfix | tweak
-phase: open                       # open | design | build | verify | archive
+phase: issue                       # issue | design | build | verify | archive
 auto_transition: true             # true | false
 ```
 
@@ -60,7 +60,7 @@ archived: false
 ## 状态转换
 
 ```
-open ──open-complete──→ design ──design-complete──→ build ──build-complete──→ verify
+issue ──issue-complete──→ design ──design-complete──→ build ──build-complete──→ verify
                                                           │                        │
                                                      verify-fail ←──────── verify-pass
                                                                                   │

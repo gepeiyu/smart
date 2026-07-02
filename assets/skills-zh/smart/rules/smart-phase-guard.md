@@ -18,7 +18,7 @@ Agent 必须始终知道当前所在的 Smart 工作流阶段。通过读取 `.s
 
 | 阶段 | 允许产物 | 禁止写入 |
 |------|---------|---------|
-| `open` | `proposal.md`, `design.md`, `tasks.md`, `specs/**/*.md` | 源码文件 |
+| `issue` | `proposal.md`, `design.md`, `tasks.md`, `specs/**/*.md` | 源码文件 |
 | `design` | `brainstorm-summary.md`, `design.md`, `specs/**/*.md`, `plans/**/*.md` | 源码文件 |
 | `build` | `src/**`, `lib/**`, `tests/**`, `plans/**/*.md` | — |
 | `verify` | `verification-report.md` | 源码文件（仅读） |

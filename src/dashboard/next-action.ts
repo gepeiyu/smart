@@ -1,7 +1,7 @@
 import type { ChangeInfo, NextAction } from './types.js';
 
 const COMMAND_MAP: Record<string, { command: string; label: string }> = {
-  open: { command: 'smart-issue', label: 'Smart Issue' },
+  issue: { command: 'smart-issue', label: 'Smart Issue' },
   design: { command: 'smart-design', label: 'Smart Design' },
   build: { command: 'smart-build', label: 'Smart Build' },
   verify: { command: 'smart-verify', label: 'Smart Verify' },

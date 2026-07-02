@@ -50,7 +50,7 @@ smart-env.sh（被所有脚本 source 加载）
 
 | 转换 | 校验条件 |
 |------|---------|
-| open-complete | proposal.md + tasks.md 存在 |
+| issue-complete | proposal.md + tasks.md 存在 |
 | design-complete | design_doc 字段已设且文件存在 |
 | build-complete | build_mode 已选、isolation 已选、审查完成 |
 | verify-pass | verification_report 存在 + branch_status=handled |

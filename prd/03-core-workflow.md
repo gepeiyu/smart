@@ -6,8 +6,8 @@
 /smart-issue ──→ /smart-design ──→ /smart-build ──→ /smart-verify ──→ /smart-archive
 (OpenSpec)       (Superpowers)     (Superpowers)     (Both)           (OpenSpec)
 
-/smart-hotfix:  open ──→ build ──→ verify ──→ archive（跳过 Brainstorming）
-/smart-tweak:   open ──→ light build ──→ light verify ──→ archive（跳过 Brainstorming + Plan）
+/smart-hotfix:  issue ──→ build ──→ verify ──→ archive（跳过 Brainstorming）
+/smart-tweak:   issue ──→ light build ──→ light verify ──→ archive（跳过 Brainstorming + Plan）
 ```
 
 ## 3.2 各阶段详解
@@ -21,7 +21,7 @@
 3. PRD 拆分预检（大 PRD 分流）
 4. `openspec new change` → 创建变更目录
 5. 生成 proposal.md / design.md / tasks.md（使用 OpenSpec 逐 artifact JSON 指令）
-6. Guard：验证 artifacts 存在 → `guard --apply open-complete`
+6. Guard：验证 artifacts 存在 → `guard --apply issue-complete`
 
 ### Phase 2: Design（`/smart-design`）
 
@@ -82,7 +82,7 @@
 ```yaml
 # 核心
 workflow: full                    # full | hotfix | tweak
-phase: build                      # open | design | build | verify | archive
+phase: build                      # issue | design | build | verify | archive
 auto_transition: true             # true | false
 
 # 执行模式
@@ -117,7 +117,7 @@ archived: false
 ### 状态转换
 
 ```
-open ──open-complete──→ design ──design-complete──→ build ──build-complete──→ verify
+issue ──issue-complete──→ design ──design-complete──→ build ──build-complete──→ verify
                                                         │                        │
                                                    verify-fail ←──────── verify-pass
                                                                                 │
@@ -132,7 +132,7 @@ open ──open-complete──→ design ──design-complete──→ build �
 
 | 转换 | 前置条件 |
 |------|---------|
-| open → design | proposal.md + tasks.md 存在 |
+| issue → design | proposal.md + tasks.md 存在 |
 | design → build | design_doc 字段已设置且文件存在 |
 | build → verify | 所有任务完成，审查通过 |
 | verify → archive | verification_report 存在，branch_status=handled |
@@ -152,8 +152,8 @@ open ──open-complete──→ design ──design-complete──→ build �
 
 | 阶段 | auto_transition | 结果 | 下一技能 |
 |------|----------------|------|---------|
-| open | true | auto | smart-design / smart-build |
-| open | false | manual | — |
+| issue | true | auto | smart-design / smart-build |
+| issue | false | manual | — |
 | design | true | auto | smart-build |
 | design | false | manual | — |
 | build | true | auto | smart-verify |

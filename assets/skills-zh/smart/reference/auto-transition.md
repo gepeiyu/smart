@@ -15,8 +15,8 @@ auto_transition: true   # true | false
 
 | 阶段 | auto_transition | 结果 | 下一技能 |
 |------|----------------|------|---------|
-| `open` | true | auto | smart-design / smart-build |
-| `open` | false | manual | — |
+| `issue` | true | auto | smart-design / smart-build |
+| `issue` | false | manual | — |
 | `design` | true | auto | smart-build |
 | `design` | false | manual | — |
 | `build` | true | auto | smart-verify |

@@ -16,7 +16,7 @@
 
 | 问题 | 原因 | 修复 |
 |------|------|------|
-| 守卫拒绝 `open-complete` | proposal.md 或 tasks.md 缺失 | 重新生成缺失产物 |
+| 守卫拒绝 `issue-complete` | proposal.md 或 tasks.md 缺失 | 重新生成缺失产物 |
 | 守卫拒绝 `design-complete` | design_doc 字段未设置或文件缺失 | 完成 Design Doc 并设置路径 |
 | 守卫拒绝 `build-complete` | 任务未全部勾选 | 完成并勾选所有任务 |
 | 守卫拒绝 `verify-pass` | verification_report 不存在 | 生成验证报告 |

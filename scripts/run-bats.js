@@ -19,7 +19,7 @@ try {
   });
   process.exit(result.status ?? 0);
 } catch (err) {
-  const exitCode = (err as { status?: number }).status ?? 1;
+  const exitCode = err && typeof err === 'object' && 'status' in err && typeof err.status === 'number' ? err.status : 1;
   if (exitCode !== 0) {
     console.error(`bats exited with code ${exitCode}`);
   }

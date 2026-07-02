@@ -86,7 +86,7 @@ _safe_command() {
 }
 
 # ── Check functions per phase ─────────────────────────────────────────
-check_open() {
+check_issue() {
   local checks_passed=0
   local checks_total=0
   local errors=""
@@ -144,7 +144,7 @@ check_design() {
     errors="${errors}  - MISSING: design_doc is not set\n"
   fi
 
-  # tasks.md should exist (from open phase)
+  # tasks.md should exist (from issue phase)
   checks_total=$((checks_total + 1))
   if _file_exists "tasks.md"; then
     checks_passed=$((checks_passed + 1))
@@ -316,14 +316,14 @@ check_archive() {
 # ═══════════════════════════════════════════════════════════════════════
 if [ "$MODE" = "--check" ]; then
   case "$TARGET" in
-    open)    check_open ;;
+    issue)   check_issue ;;
     design)  check_design ;;
     build)   check_build ;;
     verify)  check_verify ;;
     archive) check_archive ;;
     *)
       echo "ERROR: Unknown phase '${TARGET}'" >&2
-      echo "  Valid phases: open design build verify archive" >&2
+      echo "  Valid phases: issue design build verify archive" >&2
       exit 1
       ;;
   esac
@@ -334,7 +334,7 @@ if [ "$MODE" = "--check" ]; then
 elif [ "$MODE" = "--apply" ]; then
   # Run the appropriate check first
   case "$TARGET" in
-    open-complete)    GUARD_PHASE="open" ;;
+    issue-complete)   GUARD_PHASE="issue" ;;
     design-complete)  GUARD_PHASE="design" ;;
     build-complete)   GUARD_PHASE="build" ;;
     verify-pass)      GUARD_PHASE="verify" ;;

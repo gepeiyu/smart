@@ -24,10 +24,11 @@ function eraseLines(count: number): void {
 
 export async function platformSelectPrompt(config: CheckboxConfig): Promise<string[]> {
   const { message, choices } = config;
-  const selected = new Set<string>();
+  const selected = new Set(choices.filter(c => c.checked && !c.disabled).map(c => c.value));
   let filterText = '';
   let cursorPos = 0;
   let currentPage = 0;
+  let renderedLineCount = 0;
   const pageSize = config.pageSize || 10;
 
   const filtered = (): CheckboxChoice[] => {
@@ -66,11 +67,13 @@ export async function platformSelectPrompt(config: CheckboxConfig): Promise<stri
     }
 
     lines.push('  (a) Select All  (i) Invert  (Enter) Confirm');
-    process.stdout.write('\n' + lines.join('\n') + '\n');
+    process.stdout.write(lines.join('\n') + '\n');
+    renderedLineCount = lines.length;
   };
 
   const cleanup = (result: string[]): void => {
-    eraseLines(filtered().length + 5);
+    eraseLines(renderedLineCount);
+    renderedLineCount = 0;
     const selectedNames = result.map(v => choices.find(c => c.value === v)?.name || v).join(', ');
     process.stdout.write(`? ${message} ${selectedNames || '(none)'}\n`);
   };
@@ -164,7 +167,7 @@ export async function platformSelectPrompt(config: CheckboxConfig): Promise<stri
       currentPage = 0;
     }
 
-    eraseLines(filtered().length + 5);
+    eraseLines(renderedLineCount);
     render();
   }
 

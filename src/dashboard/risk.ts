@@ -4,7 +4,7 @@ export function assessRisks(changes: ChangeInfo[]): Risk[] {
   const risks: Risk[] = [];
 
   for (const change of changes) {
-    if (change.phase === 'open' && !change.tasks) {
+    if (change.phase === 'issue' && !change.tasks) {
       risks.push({
         change: change.name,
         level: 'medium',
@@ -28,7 +28,7 @@ export function assessRisks(changes: ChangeInfo[]): Risk[] {
       });
     }
 
-    if (change.tasks && change.tasks.percent < 100 && change.phase !== 'open') {
+    if (change.tasks && change.tasks.percent < 100 && change.phase !== 'issue') {
       risks.push({
         change: change.name,
         level: 'low',

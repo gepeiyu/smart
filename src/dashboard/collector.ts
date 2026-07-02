@@ -26,7 +26,7 @@ export async function collectDashboardSnapshot(projectPath: string): Promise<Das
 
     const info: ChangeInfo = {
       name: dirName,
-      phase: yaml.phase || 'open',
+      phase: yaml.phase || 'issue',
       workflow: yaml.workflow || 'full',
       autoTransition: yaml.auto_transition ?? true,
       verifyResult: yaml.verify_result || 'pending',

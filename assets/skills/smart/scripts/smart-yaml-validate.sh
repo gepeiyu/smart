@@ -60,8 +60,8 @@ if [ -z "$PHASE" ]; then
   VALID=1
 else
   case "$PHASE" in
-    open|design|build|verify|archive) ;;
-    *) ERRORS="${ERRORS}  - Invalid phase: ${PHASE} (must be open|design|build|verify|archive)\n"; VALID=1 ;;
+    issue|design|build|verify|archive) ;;
+    *) ERRORS="${ERRORS}  - Invalid phase: ${PHASE} (must be issue|design|build|verify|archive)\n"; VALID=1 ;;
   esac
 fi
 
