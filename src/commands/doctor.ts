@@ -16,7 +16,7 @@ function checkOpenSpecCLI(): CheckResult {
   return {
     name: 'OpenSpec CLI',
     status: available ? 'pass' : 'fail',
-    message: available ? 'OpenSpec CLI is installed' : 'OpenSpec CLI is not installed. Run: npm install -g @openspec/cli',
+    message: available ? 'OpenSpec CLI is installed' : 'OpenSpec CLI is not installed. Run: npm install -g @fission-ai/openspec@latest',
   };
 }
 
@@ -171,7 +171,7 @@ export async function doctorCommand(targetPath: string, opts?: Record<string, un
     console.log('\nAttempting auto-fix...');
     if (results[0].status === 'fail') {
       try {
-        execFileSync('npm', ['install', '-g', '@openspec/cli'], { stdio: 'inherit', timeout: 120000 });
+        execFileSync('npm', ['install', '-g', '@fission-ai/openspec@latest'], { stdio: 'inherit', timeout: 120000 });
         console.log('  ✓ OpenSpec CLI installed');
       } catch {
         console.log('  ✗ Failed to install OpenSpec CLI');
