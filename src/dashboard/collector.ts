@@ -1,5 +1,5 @@
 import path from 'path';
-import { readDir } from '../utils/file-system.js';
+import { fileExists, readDir } from '../utils/file-system.js';
 import { readSmartYaml } from './yaml.js';
 import { readTasks } from './task-parser.js';
 import { readVerification } from './verify-parser.js';
@@ -10,7 +10,7 @@ import type { DashboardSnapshot, ChangeInfo, NextAction, Risk } from './types.js
 
 export async function collectDashboardSnapshot(projectPath: string): Promise<DashboardSnapshot> {
   const changesDir = path.join(projectPath, 'openspec', 'changes');
-  const changeDirs = await readDir(changesDir);
+  const changeDirs = await fileExists(changesDir) ? await readDir(changesDir) : [];
 
   const allChanges: ChangeInfo[] = [];
   const changes: ChangeInfo[] = [];

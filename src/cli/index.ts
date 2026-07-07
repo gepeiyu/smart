@@ -35,9 +35,13 @@ program
   .option('--skip-existing', 'Skip already installed components')
   .option('--overwrite', 'Overwrite installed components')
   .option('--no-deps', 'Skip dependency installation')
+  .option('--json', 'Output as JSON')
   .option('--lang <lang>', 'Language (en | zh)')
+  .option('--language <language>', 'Language (en | zh)')
   .action(async (path?: string, options?: Record<string, unknown>) => {
-    await initCommand(path || process.cwd(), options || {});
+    const normalizedOptions = { ...(options || {}) };
+    if (!normalizedOptions.language && normalizedOptions.lang) normalizedOptions.language = normalizedOptions.lang;
+    await initCommand(path || process.cwd(), normalizedOptions);
   });
 
 program
@@ -73,9 +77,17 @@ program
 program
   .command('update')
   .description('Update Smart npm package and skills')
+  .argument('[path]', 'Project path')
   .option('--yes', 'Skip confirmation')
-  .action(async (options?: Record<string, unknown>) => {
-    await updateCommand(process.cwd(), options || {});
+  .option('--scope <scope>', 'Update scope (project | global)')
+  .option('--skip-npm', 'Skip npm package update')
+  .option('--json', 'Output as JSON')
+  .option('--lang <lang>', 'Language (en | zh)')
+  .option('--language <language>', 'Language (en | zh)')
+  .action(async (path?: string, options?: Record<string, unknown>) => {
+    const normalizedOptions = { ...(options || {}) };
+    if (!normalizedOptions.language && normalizedOptions.lang) normalizedOptions.language = normalizedOptions.lang;
+    await updateCommand(path || process.cwd(), normalizedOptions);
   });
 
 program
@@ -84,6 +96,7 @@ program
   .argument('[path]', 'Project path')
   .option('--force', 'Skip confirmation')
   .option('--scope <scope>', 'Uninstall scope (project | global)')
+  .option('--json', 'Output as JSON')
   .action(async (path?: string, options?: Record<string, unknown>) => {
     await uninstallCommand(path || process.cwd(), options || {});
   });

@@ -23,9 +23,10 @@
 |------|------|------|
 | `--yes` | boolean | 非交互模式，自动选择检测到的平台 |
 | `--scope` | project \| global | 安装范围 |
-| `--language` | en \| zh | 技能语言 |
+| `--language`, `--lang` | en \| zh | 技能语言 |
 | `--skip-existing` | boolean | 跳过已有组件 |
 | `--overwrite` | boolean | 覆盖已有组件 |
+| `--no-deps` | boolean | 跳过依赖安装 |
 | `--json` | boolean | JSON 输出 |
 
 ### smart status
@@ -46,16 +47,18 @@
 
 | 选项 | 说明 |
 |------|------|
+| `--fix` | 尝试自动修复问题 |
 | `--json` | JSON 诊断结果 |
-| `--scope` | auto / project / global |
 
 ### smart update
 
 | 选项 | 说明 |
 |------|------|
+| `--yes` | 跳过确认 |
 | `--json` | JSON 输出 |
-| `--language` | en / zh |
+| `--language`, `--lang` | en / zh |
 | `--scope` | project / global |
+| `--skip-npm` | 只更新技能文件，跳过 npm 包更新 |
 
 ### smart uninstall
 

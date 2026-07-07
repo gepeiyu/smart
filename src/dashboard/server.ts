@@ -6,7 +6,7 @@ import { collectDashboardSnapshot } from './collector.js';
 import { openBrowser } from './open-browser.js';
 
 const DEFAULT_PORT = 4321;
-const STATIC_DIR = path.resolve(import.meta.dirname, '..', '..', 'assets', 'dashboard');
+const STATIC_DIR = path.resolve(import.meta.dirname, 'web');
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -41,10 +41,11 @@ export async function startDashboard(projectPath: string, options: ServerOptions
         return;
       }
 
-      let filePath = req.url === '/' ? '/index.html' : req.url;
-      filePath = path.join(STATIC_DIR, filePath || 'index.html');
+      const urlPath = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`).pathname;
+      const relativePath = urlPath === '/' ? 'index.html' : urlPath.slice(1);
+      const filePath = path.resolve(STATIC_DIR, relativePath);
 
-      if (!filePath.startsWith(STATIC_DIR)) {
+      if (path.relative(STATIC_DIR, filePath).startsWith('..')) {
         res.writeHead(403);
         res.end('Forbidden');
         return;

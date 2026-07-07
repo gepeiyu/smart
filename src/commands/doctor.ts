@@ -21,7 +21,7 @@ function checkOpenSpecCLI(): CheckResult {
 }
 
 async function checkWorkingDirs(cwd: string): Promise<CheckResult> {
-  const expected = ['.smart', 'docs', 'docs/superpowers', 'docs/design', 'tasks'];
+  const expected = ['.smart', 'docs', 'docs/superpowers', 'docs/superpowers/specs', 'docs/superpowers/plans', 'openspec', 'openspec/changes'];
   const missing = [];
 
   for (const dir of expected) {
@@ -137,7 +137,7 @@ export async function doctorCommand(targetPath: string, opts?: Record<string, un
   const fixMode = opts?.fix === true;
   const jsonOutput = opts?.json === true;
 
-  console.log(`Smart Doctor — ${cwd}\n`);
+  if (!jsonOutput) console.log(`Smart Doctor — ${cwd}\n`);
 
   const results: CheckResult[] = [
     checkOpenSpecCLI(),

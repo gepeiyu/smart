@@ -14,7 +14,7 @@ import { hasCodegraphProjectIndex, installCodegraph, resolveCodegraphCommand } f
 import { printVersionInfo } from '../core/version.js';
 import { t, type TranslationKey } from './i18n.js';
 
-type InitOptions = { yes?: boolean; skipExisting?: boolean; overwrite?: boolean; json?: boolean; scope?: InstallScope; language?: string };
+type InitOptions = { yes?: boolean; skipExisting?: boolean; overwrite?: boolean; json?: boolean; scope?: InstallScope; language?: string; deps?: boolean };
 type InstallStatus = 'installed' | 'skipped' | 'failed';
 type ComponentAction = 'overwrite' | 'skip' | 'install';
 type BulkOverwriteChoice = 'overwrite-all' | 'skip-all' | 'choose';
@@ -88,6 +88,8 @@ type NpmDepId = 'openspec' | 'superpowers' | 'codegraph';
 interface NpmDepState { id: NpmDepId; installed: boolean; }
 
 async function selectNpmDeps(projectPath: string, spPlatformIds: string[], options: InitOptions, lang: string): Promise<Set<NpmDepId>> {
+  if (options.deps === false) return new Set();
+
   const openSpecInstalled = isCommandAvailable('openspec');
   const codegraphInstalled = (await hasCodegraphProjectIndex(projectPath)) || resolveCodegraphCommand() !== null;
   const superpowersInstalled = spPlatformIds.length === 0;

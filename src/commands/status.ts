@@ -7,6 +7,42 @@ interface SmartYamlField {
   workflow?: string;
   issue_number?: string;
   issue_title?: string;
+  verify_result?: string;
+  archived?: string;
+}
+
+interface ActiveChange {
+  name: string;
+  phase: string;
+  workflow: string;
+  issue: string;
+  title: string;
+  verifyResult: string;
+  archived: boolean;
+  nextCommand: string | null;
+}
+
+function recommendNextCommand(change: Pick<ActiveChange, 'phase' | 'workflow' | 'verifyResult' | 'archived'>): string | null {
+  if (change.archived) return null;
+  if (change.phase === 'verify' && change.verifyResult === 'pass') return '/smart-archive';
+  if (change.phase === 'verify' && change.verifyResult === 'fail') return '/smart-build';
+
+  switch (change.phase) {
+    case 'issue':
+      if (change.workflow === 'bugfix') return '/smart-bugfix';
+      if (change.workflow === 'quick') return '/smart-quick';
+      return '/smart-design';
+    case 'design':
+      return '/smart-build';
+    case 'build':
+      if (change.workflow === 'bugfix') return '/smart-bugfix';
+      if (change.workflow === 'quick') return '/smart-quick';
+      return '/smart-verify';
+    case 'verify':
+      return '/smart-verify';
+    default:
+      return '/smart';
+  }
 }
 
 async function readSmartYaml(changeDir: string): Promise<SmartYamlField | null> {
@@ -44,20 +80,25 @@ export async function statusCommand(targetPath: string, opts?: Record<string, un
   }
 
   const entries = await readDir(changesDir);
-  const activeChanges: Array<{ name: string; phase: string; workflow: string; issue: string; title: string }> = [];
+  const activeChanges: ActiveChange[] = [];
 
   for (const name of entries) {
     if (name === 'archive' || name === '.archive') continue;
     const changeDir = path.join(changesDir, name);
     const yaml = await readSmartYaml(changeDir);
     if (yaml) {
-      activeChanges.push({
+      const change: ActiveChange = {
         name,
         phase: yaml.phase || 'issue',
         workflow: yaml.workflow || 'full',
         issue: yaml.issue_number || '',
         title: yaml.issue_title || '',
-      });
+        verifyResult: yaml.verify_result || 'pending',
+        archived: yaml.archived === 'true',
+        nextCommand: null,
+      };
+      change.nextCommand = recommendNextCommand(change);
+      activeChanges.push(change);
     }
   }
 
@@ -77,12 +118,8 @@ export async function statusCommand(targetPath: string, opts?: Record<string, un
     const titleInfo = change.title ? ` — ${change.title}` : '';
     console.log(`  ● ${change.name}${issueInfo}${titleInfo}`);
     console.log(`    Phase: ${change.phase}  |  Workflow: ${change.workflow}`);
+    if (change.nextCommand) console.log(`    Next: ${change.nextCommand}`);
   }
 
-  console.log(`\nNext commands:
-  /smart-issue   — Create or select a change
-  /smart-design  — Generate design document
-  /smart-build   — Generate build specification
-  /smart-verify  — Run verification
-  /smart-archive — Archive completed changes`);
+  console.log(`\nUse /smart to resume the recommended workflow step automatically.`);
 }

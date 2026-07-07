@@ -1,12 +1,18 @@
 import type { ChangeInfo, NextAction } from './types.js';
 
 const COMMAND_MAP: Record<string, { command: string; label: string }> = {
-  issue: { command: 'smart-issue', label: 'Smart Issue' },
-  design: { command: 'smart-design', label: 'Smart Design' },
-  build: { command: 'smart-build', label: 'Smart Build' },
+  issue: { command: 'smart-design', label: 'Smart Design' },
+  design: { command: 'smart-build', label: 'Smart Build' },
+  build: { command: 'smart-verify', label: 'Smart Verify' },
   verify: { command: 'smart-verify', label: 'Smart Verify' },
   archive: { command: 'smart-archive', label: 'Smart Archive' },
 };
+
+function modeCommand(workflow: string): { command: string; label: string } | null {
+  if (workflow === 'bugfix') return { command: 'smart-bugfix', label: 'Smart Bugfix' };
+  if (workflow === 'quick') return { command: 'smart-quick', label: 'Smart Quick' };
+  return null;
+}
 
 export function recommendNextAction(change: ChangeInfo): NextAction | null {
   if (change.archived) {
@@ -36,7 +42,8 @@ export function recommendNextAction(change: ChangeInfo): NextAction | null {
     };
   }
 
-  const mapping = COMMAND_MAP[change.phase];
+  const modeMapping = ['issue', 'build'].includes(change.phase) ? modeCommand(change.workflow) : null;
+  const mapping = modeMapping ?? COMMAND_MAP[change.phase];
   if (mapping) {
     return {
       change: change.name,

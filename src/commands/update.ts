@@ -18,7 +18,7 @@ import { t, type TranslationKey } from './i18n.js';
 const PACKAGE_NAME = '@gepeiyu/smart';
 const OFFICIAL_REGISTRY = 'https://registry.npmjs.org';
 
-interface UpdateOptions { json?: boolean; language?: string; scope?: InstallScope; skipNpm?: boolean; }
+interface UpdateOptions { json?: boolean; language?: string; scope?: InstallScope; skipNpm?: boolean; yes?: boolean; }
 type SkillLanguage = 'en' | 'zh';
 
 interface InstalledSmartTarget {
@@ -186,7 +186,7 @@ export async function updateCommand(targetPath: string, options: UpdateOptions =
   const codegraphAlreadyIndexed = await hasCodegraphProjectIndex(projectPath);
   if (options.json) { codegraphStatus = 'skipped'; }
   else if (codegraphAlreadyIndexed) { log('\n  CodeGraph: skipped (existing .codegraph index detected)'); }
-  else { const shouldInstallCodegraph = options.skipNpm ? false : await promptCodegraphInstall(lang); if (shouldInstallCodegraph) { log(`\n  ${t(lang, 'installingCG')}`); installCodegraph(primaryScope, projectPath); codegraphStatus = 'installed'; log(`  CodeGraph: ${codegraphStatus}`); } else { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); } }
+  else { const shouldInstallCodegraph = options.skipNpm ? false : options.yes === true || await promptCodegraphInstall(lang); if (shouldInstallCodegraph) { log(`\n  ${t(lang, 'installingCG')}`); installCodegraph(primaryScope, projectPath); codegraphStatus = 'installed'; log(`  CodeGraph: ${codegraphStatus}`); } else { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); } }
 
   if (options.json) {
     console.log(JSON.stringify({

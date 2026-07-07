@@ -61,49 +61,53 @@ async function load() {
 }
 
 function render(data) {
-  document.getElementById('meta').textContent = `Project: ${data.project.name}  |  Generated: ${new Date(data.project.generatedAt).toLocaleString()}`;
+  const verifyFailed = data.changes.filter(c => c.verifyResult === 'fail').length;
+  const dirtyFiles = data.git?.dirtyFiles?.length || 0;
+  document.getElementById('meta').textContent = `Project: ${data.projectPath}  |  Generated: ${new Date(data.generatedAt).toLocaleString()}`;
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="stat-value">${data.summary.activeChanges}</div><div class="stat-label">Active Changes</div></div>
-    <div class="stat"><div class="stat-value">${data.summary.archivedChanges}</div><div class="stat-label">Archived</div></div>
-    <div class="stat"><div class="stat-value">${data.summary.verifyFailed}</div><div class="stat-label">Verify Failed</div></div>
-    <div class="stat"><div class="stat-value">${data.summary.dirtyFiles}</div><div class="stat-label">Dirty Files</div></div>
+    <div class="stat"><div class="stat-value">${data.changes.length}</div><div class="stat-label">Active Changes</div></div>
+    <div class="stat"><div class="stat-value">${data.archived.length}</div><div class="stat-label">Archived</div></div>
+    <div class="stat"><div class="stat-value">${verifyFailed}</div><div class="stat-label">Verify Failed</div></div>
+    <div class="stat"><div class="stat-value">${dirtyFiles}</div><div class="stat-label">Dirty Files</div></div>
   `;
 
-  document.getElementById('active-changes').innerHTML = data.changes.active.length === 0
+  document.getElementById('active-changes').innerHTML = data.changes.length === 0
     ? '<p class="loading">No active changes.</p>'
-    : data.changes.active.map(renderChange).join('');
+    : data.changes.map(renderChange).join('');
 
-  document.getElementById('archived-changes').innerHTML = data.changes.archived.length === 0
+  document.getElementById('archived-changes').innerHTML = data.archived.length === 0
     ? '<p class="loading">No archived changes.</p>'
-    : data.changes.archived.map(renderChange).join('');
+    : data.archived.map(renderChange).join('');
 
   const git = data.git;
-  document.getElementById('git-status').innerHTML = `
+  document.getElementById('git-status').innerHTML = git ? `
     <div class="git-row"><strong>Branch:</strong> ${git.branch || 'N/A'}</div>
-    <div class="git-row"><strong>HEAD:</strong> ${git.head || 'N/A'}</div>
-    <div class="git-row"><strong>Dirty files:</strong> ${git.dirtyFiles}</div>
-    ${git.recentCommits.length > 0 ? '<div class="git-row"><strong>Recent commits:</strong></div>' + git.recentCommits.map(c => '<div class="git-row" style="font-family:monospace;font-size:0.8rem;color:#8b949e;">' + c + '</div>').join('') : ''}
-  `;
+    <div class="git-row"><strong>HEAD:</strong> ${git.headShort || git.head || 'N/A'}</div>
+    <div class="git-row"><strong>Dirty files:</strong> ${dirtyFiles}</div>
+    ${git.recentCommits.length > 0 ? '<div class="git-row"><strong>Recent commits:</strong></div>' + git.recentCommits.map(c => '<div class="git-row" style="font-family:monospace;font-size:0.8rem;color:#8b949e;">' + c.hashShort + ' ' + c.message + '</div>').join('') : ''}
+  ` : '<p class="loading">Git information unavailable.</p>';
 }
 
 function renderChange(c) {
   const phaseBadge = `badge-${c.phase}`;
-  const verifyBadge = c.verify.result === 'fail' ? 'badge-fail' : c.verify.result === 'pass' ? 'badge-pass' : '';
+  const verifyResult = c.verification?.result || c.verifyResult;
+  const verifyBadge = verifyResult === 'fail' ? 'badge-fail' : verifyResult === 'pass' ? 'badge-pass' : '';
+  const taskText = c.tasks ? `${c.tasks.completed}/${c.tasks.total}` : 'N/A';
   return `<div class="change">
     <div class="change-header">
-      <span class="change-name">${c.displayName}</span>
+      <span class="change-name">${c.name}</span>
       <span>
         <span class="badge ${phaseBadge}">${c.phase}</span>
         ${c.workflow ? `<span class="badge badge-unknown">${c.workflow}</span>` : ''}
-        ${verifyBadge ? `<span class="badge ${verifyBadge}">${c.verify.result}</span>` : ''}
+        ${verifyBadge ? `<span class="badge ${verifyBadge}">${verifyResult}</span>` : ''}
       </span>
     </div>
     <div class="change-meta">
-      <span>Tasks: ${c.tasks.completed}/${c.tasks.total}</span>
-      ${c.updatedAt ? `<span>Updated: ${new Date(c.updatedAt).toLocaleString()}</span>` : ''}
+      <span>Tasks: ${taskText}</span>
+      <span>Auto transition: ${c.autoTransition ? 'on' : 'off'}</span>
     </div>
-    ${c.risks.length > 0 ? `<div class="risk-list">${c.risks.map(r => `<div class="risk-item ${r.level}">${r.level === 'error' ? '✗' : r.level === 'warning' ? '⚠' : 'ℹ'} ${r.message}</div>`).join('')}</div>` : ''}
-    ${c.next ? `<div class="next">→ ${c.next.command || c.next.description}</div>` : ''}
+    ${c.risks.length > 0 ? `<div class="risk-list">${c.risks.map(r => `<div class="risk-item warning">${r}</div>`).join('')}</div>` : ''}
+    ${c.nextAction ? `<div class="next">→ /${c.nextAction}</div>` : ''}
   </div>`;
 }
 
