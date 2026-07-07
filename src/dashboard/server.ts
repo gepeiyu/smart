@@ -5,7 +5,7 @@ import { fileExists } from '../utils/file-system.js';
 import { collectDashboardSnapshot } from './collector.js';
 import { openBrowser } from './open-browser.js';
 
-const DEFAULT_PORT = 4321;
+const DEFAULT_PORT = 5271;
 const STATIC_DIR = path.resolve(import.meta.dirname, 'web');
 
 const MIME_TYPES: Record<string, string> = {

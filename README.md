@@ -75,7 +75,7 @@ User Request
 |------|------|
 | `smart init [path]` | 检测 AI 平台，安装流水线技能 |
 | `smart status [path]` | 查看当前工作流状态 |
-| `smart dashboard [path]` | 打开 Web 仪表盘（默认 `127.0.0.1:4321`）|
+| `smart dashboard [path]` | 打开 Web 仪表盘（默认 `127.0.0.1:5271`）|
 | `smart doctor [path]` | 诊断环境健康度 |
 | `smart update [path]` | 升级 Smart 和技能文件 |
 | `smart uninstall [path]` | 卸载 Smart 组件 |
