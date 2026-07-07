@@ -1,21 +1,21 @@
 ---
-name: smart-tweak
-description: Smart 微调预设 — 跳过 Brainstorming 和 Plan，轻量 Build + 轻量 Verify
+name: smart-quick
+description: Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify
 ---
 
-# Smart 微调预设
+# Smart 快捷模式
 
 ## 概述
 
-微调（Tweak）预设用于小型调整，跳过 Brainstorming 和 Plan 阶段，使用轻量验证。
+快捷模式用于小型调整，跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify。
 
 ```
-/smart-tweak: issue → light build → light verify → archive
+/smart-quick: issue → quick build → quick verify → archive
 ```
 
 ## 差异
 
-| 方面 | 完整工作流 | 微调 |
+| 方面 | 完整工作流 | 快捷模式 |
 |------|-----------|------|
 | Issue 阶段 | 完整需求澄清 | 仅确认变更范围 |
 | Design 阶段 | Brainstorm + Plan | **跳过** |
@@ -27,14 +27,14 @@ description: Smart 微调预设 — 跳过 Brainstorming 和 Plan，轻量 Build
 
 1. **Open（Issue 轻量）** — 确认变更范围，创建变更
 2. **Light Build** — 直接实现，不经过子代理和完整审查
-3. **Light Verify** — 6 项预设检查清单
+3. **Light Verify** — 6 项模式检查清单
 4. **Archive** — 完整归档流程
 
 ## 配置
 
 ```yaml
 # .smart.yaml
-workflow: tweak
+workflow: quick
 phase: issue
 auto_transition: true
 build_mode: direct

@@ -140,8 +140,8 @@ function displaySummary(results: PlatformResult[], scope: InstallScope, lang: st
   if (scope === 'project') console.log(`\n  ${t(lang, 'workingDirs')}`);
   console.log(`\n  ${t(lang, 'getStarted')}`);
   console.log(`    ${t(lang, 'getStartedSmart')}`);
-  console.log(`    ${t(lang, 'getStartedHotfix')}`);
-  console.log(`    ${t(lang, 'getStartedTweak')}\n`);
+  console.log(`    ${t(lang, 'getStartedBugfix')}`);
+  console.log(`    ${t(lang, 'getStartedQuick')}\n`);
 }
 
 export async function initCommand(targetPath: string, options: InitOptions = {}): Promise<void> {

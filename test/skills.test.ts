@@ -57,8 +57,8 @@ describe('skills helpers (pure)', () => {
 
   describe('getTopLevelSkillNames', () => {
     it('extracts top-level skill names from paths', () => {
-      const result = getTopLevelSkillNames(['smart/SKILL.md', 'smart-hotfix/SKILL.md']);
-      expect(result).toEqual(['smart', 'smart-hotfix']);
+      const result = getTopLevelSkillNames(['smart/SKILL.md', 'smart-bugfix/SKILL.md']);
+      expect(result).toEqual(['smart', 'smart-bugfix']);
     });
 
     it('filters out non-SKILL.md paths', () => {
@@ -114,7 +114,7 @@ describe('readManifest', () => {
   it('reads and returns manifest', async () => {
     vi.mocked(readJson).mockResolvedValue({
       version: '0.4.0',
-      skills: ['smart/SKILL.md', 'smart-hotfix/SKILL.md'],
+      skills: ['smart/SKILL.md', 'smart-bugfix/SKILL.md'],
     });
     const manifest = await readManifest();
     expect(manifest.version).toBe('0.4.0');

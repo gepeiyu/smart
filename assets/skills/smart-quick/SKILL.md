@@ -1,9 +1,9 @@
 ---
-name: smart-tweak
-description: "Smart Tweak — Preset workflow for small changes (copy, config, docs, prompts). Skips brainstorming and full plan. Must upgrade to full workflow if scope exceeds tweak conditions. Invoked by /smart-tweak."
+name: smart-quick
+description: Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify
 ---
 
-# Smart Tweak — Preset Workflow
+# Smart Quick — 快捷模式
 
 **Phase Owner**: Both (OpenSpec + Superpowers)
 
@@ -20,11 +20,11 @@ description: "Smart Tweak — Preset workflow for small changes (copy, config, d
 
 1. Clarify the change description
 2. Create minimal proposal.md and tasks.md
-3. Update `.smart.yaml` with `workflow: tweak`
+3. Update `.smart.yaml` with `workflow: quick`
 
 ### Step 2: Upgrade Check
 
-Check against tweak upgrade criteria:
+Check against quick upgrade criteria:
 - Change involves **5+ files**?
 - Cross-module coordination required?
 - **5+** new test cases needed?
@@ -33,11 +33,11 @@ Check against tweak upgrade criteria:
 - Delta spec needed?
 
 If any condition met (decision point):
-1. Alert the user that tweak upgrade to full workflow is needed
+1. Alert the user that quick upgrade to full workflow is needed
 2. Wait for user confirmation
 3. If confirmed, supplement Design Doc and return to full workflow
 
-### Step 3: Apply Tweak
+### Step 3: Apply Quick Change
 
 1. Implement the small change directly
 2. Run relevant tests

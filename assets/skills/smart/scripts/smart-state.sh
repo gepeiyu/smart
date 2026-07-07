@@ -40,7 +40,7 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
   echo "Transitions: issue-complete, design-complete, build-complete,"
   echo "             verify-pass, verify-fail, archived, archive-reopen"
   echo ""
-  echo "Workflows: full, hotfix, tweak"
+  echo "Workflows: full, bugfix, quick"
   exit 0
 fi
 
@@ -49,7 +49,7 @@ shift
 
 # ── Constants ──────────────────────────────────────────────────────────
 VALID_PHASES="issue design build verify archive"
-VALID_WORKFLOWS="full hotfix tweak"
+VALID_WORKFLOWS="full bugfix quick"
 VALID_TRANSITIONS="issue-complete design-complete build-complete verify-pass verify-fail archived archive-reopen"
 VALID_BUILD_MODES="subagent-driven-development executing-plans direct"
 VALID_ISOLATION_MODES="branch worktree"
@@ -274,8 +274,18 @@ cmd_transition() {
 
   case "$current_phase:$transition" in
     issue:issue-complete)
-      _write_field "phase" "design" "$smart_file"
-      echo "TRANSITION: issue → design (issue-complete)"
+      local workflow
+      workflow="$(_read_yaml "workflow" "$smart_file")"
+      case "$workflow" in
+        bugfix|quick)
+          _write_field "phase" "build" "$smart_file"
+          echo "TRANSITION: issue → build (issue-complete, workflow=${workflow})"
+          ;;
+        *)
+          _write_field "phase" "design" "$smart_file"
+          echo "TRANSITION: issue → design (issue-complete)"
+          ;;
+      esac
       ;;
     design:design-complete)
       _write_field "phase" "build" "$smart_file"
@@ -467,8 +477,9 @@ cmd_next() {
     exit 1
   fi
 
-  local phase auto_transition verify_result archived
+  local phase workflow auto_transition verify_result archived
   phase="$(_read_yaml "phase" "$smart_file")"
+  workflow="$(_read_yaml "workflow" "$smart_file")"
   auto_transition="$(_read_yaml "auto_transition" "$smart_file")"
   verify_result="$(_read_yaml "verify_result" "$smart_file")"
   archived="$(_read_yaml "archived" "$smart_file")"
@@ -480,13 +491,21 @@ cmd_next() {
 
   case "$phase" in
     issue)
-      echo "auto:smart-design"
+      case "$workflow" in
+        bugfix) echo "auto:smart-bugfix" ;;
+        quick) echo "auto:smart-quick" ;;
+        *) echo "auto:smart-design" ;;
+      esac
       ;;
     design)
       echo "auto:smart-build"
       ;;
     build)
-      echo "auto:smart-verify"
+      case "$workflow" in
+        bugfix) echo "auto:smart-bugfix" ;;
+        quick) echo "auto:smart-quick" ;;
+        *) echo "auto:smart-verify" ;;
+      esac
       ;;
     verify)
       if [ "$verify_result" = "pass" ]; then

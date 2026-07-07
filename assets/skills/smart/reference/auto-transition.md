@@ -22,6 +22,6 @@ The script outputs a deterministic next step based on `phase`, `workflow`, and `
 - `NEXT: manual` → do not invoke the next skill; prompt user to manually run `/<SKILL>` per `HINT`
 - `NEXT: done` → workflow is complete, no further action needed
 
-## Preset Routing
+## Mode Routing
 
-When `workflow: hotfix`, `phase: build` returns `smart-hotfix`; when `workflow: tweak`, it returns `smart-tweak`. All other phases (`verify`, `archive`) return standard skill names (`smart-verify`, `smart-archive`) regardless of workflow type. The "continuous execution mode" within preset skills may override `auto_transition` behavior — see the corresponding preset's `<IMPORTANT>` block.
+When `workflow: bugfix`, `phase: issue` or `phase: build` returns `smart-bugfix`; when `workflow: quick`, `phase: issue` or `phase: build` returns `smart-quick`. All other phases (`verify`, `archive`) return standard skill names (`smart-verify`, `smart-archive`) regardless of workflow type. The "continuous execution mode" within mode skills may override `auto_transition` behavior — see the corresponding mode's `<IMPORTANT>` block.

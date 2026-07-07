@@ -25,7 +25,7 @@ User Request
 │  /smart → /smart-issue → /smart-     │
 │  design → /smart-build → /smart-     │
 │  verify → /smart-archive             │
-│  + /smart-hotfix, /smart-tweak       │
+│  + /smart-bugfix, /smart-quick       │
 └──────────────────────────────────────┘
     │
     ▼

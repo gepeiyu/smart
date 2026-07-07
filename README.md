@@ -64,8 +64,8 @@ User Request
 5. **Archive** — OpenSpec 合并增量，归档成果
 
 **快捷入口：**
-- `/smart-hotfix` — 跳过设计，直接修 Bug
-- `/smart-tweak` — 轻量修改，跳过规划环节
+- `/smart-bugfix` — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive
+- `/smart-quick` — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify
 
 ---
 

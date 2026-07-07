@@ -1,5 +1,5 @@
 export interface SmartYaml {
-  workflow?: 'full' | 'hotfix' | 'tweak';
+  workflow?: 'full' | 'bugfix' | 'quick';
   phase?: string;
   auto_transition?: boolean;
   build_mode?: string;

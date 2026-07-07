@@ -12,7 +12,7 @@ OpenSpec handles WHAT  — outline, proposal, spec lifecycle, archive
 Superpowers handles HOW — technical design, planning, execution, closing
 ```
 
-**Core principle: brainstorming cannot be skipped. Every change must undergo deep design (except hotfix and tweak presets).**
+**Core principle: brainstorming cannot be skipped. Every change must undergo deep design (except bugfix and quick modes).**
 
 ---
 
@@ -28,17 +28,17 @@ Use the language of the user request that triggered this workflow as the default
 
 **Step 0: Active Change Discovery and Intent Detection**
 
-1. Detect presets first; if hotfix/tweak matches, invoke the corresponding preset skill directly and do not enter the normal issue branch
-2. When no preset matches, run `openspec list --json` to get all active changes
+1. Detect modes first; if bugfix/quick matches, invoke the corresponding mode skill directly and do not enter the normal issue branch
+2. When no mode matches, run `openspec list --json` to get all active changes
 
-**Preset detection has highest priority**:
-- User explicitly describes a bug fix / hotfix + meets hotfix conditions → directly invoke `/smart-hotfix`
-- User explicitly describes copy/config/docs/prompt small adjustment + meets tweak conditions → directly invoke `/smart-tweak`
-- No preset match → follow the table below
+**Mode detection has highest priority**:
+- User explicitly describes a bug fix + meets bugfix conditions → directly invoke `/smart-bugfix` and require root cause analysis before Build; prefer CodeGraph for source-behavior bugs
+- User explicitly describes copy/config/docs/prompt small adjustment + meets quick conditions → directly invoke `/smart-quick`
+- No mode match → follow the table below
 
 | Active changes | User input | Behavior |
 |----------------|------------|----------|
-| None | non-preset input | → Invoke `/smart-issue` |
+| None | non-mode input | → Invoke `/smart-issue` |
 | Exactly 1 | `/smart <description>` | → **Ask**: continue this change or create a new change |
 | Multiple | `/smart <description>` | → **Ask**: continue existing or create new; if continuing, list changes for selection |
 | Exactly 1 | `/smart` with no description | → Auto-select, enter Step 1 |
@@ -75,23 +75,23 @@ Prefer reading `openspec/changes/<name>/.smart.yaml`. If not available, fall bac
 2. `verify_result: pass` and `archived` is not `true` → Invoke `/smart-archive` (first perform final archive confirmation)
 3. `verify_result: fail` → Enter verification failure decision blocking point (pause and ask fix or accept deviation; only after user chooses fix, run `verify-fail` then `/smart-build`)
 4. `phase: verify` or tasks.md all checked → Invoke `/smart-verify`
-5. `phase: build` or has Design Doc but plan/execution incomplete → Route by workflow: `hotfix` → `/smart-hotfix`, `tweak` → `/smart-tweak`, `full` → `/smart-build`
+5. `phase: build` or has Design Doc but plan/execution incomplete → Route by workflow: `bugfix` → `/smart-bugfix`, `quick` → `/smart-quick`, `full` → `/smart-build`
 6. `phase: design` or has change but no Design Doc → Invoke `/smart-design`
 7. `phase: issue` or active change exists but `.smart.yaml` is missing → Invoke `/smart-issue`
 8. No active change → Invoke `/smart-issue`
 
 If metadata conflicts with file state, use verifiable file state as source of truth and correct `.smart.yaml` before continuing.
 
-### Preset Upgrade Criteria
+### Mode Upgrade Criteria
 
-**hotfix → full** (upgrade if any condition met):
+**bugfix → full** (upgrade if any condition met):
 - Change involves **3+ files**
 - Architecture changes (new modules, new interfaces, new dependencies)
 - Database schema changes
 - Fix introduces new public API
 - Fix scope exceeds a single function/module
 
-**tweak → full** (upgrade if any condition met):
+**quick → full** (upgrade if any condition met):
 - Change involves **5+ files**
 - Cross-module coordination required
 - **5+** new test cases needed
@@ -129,7 +129,7 @@ Nodes requiring user participation (pause only at these nodes):
 4. Decide to fix or accept deviation when verify fails (including Spec drift handling)
 5. Choose branch handling method for finishing-branch
 6. Archive phase final confirmation before running the archive script
-7. Encounter upgrade conditions (hotfix/tweak → full workflow)
+7. Encounter upgrade conditions (bugfix/quick → full workflow)
 8. Build phase scope expansion requiring redesign or new change split
 9. Issue phase large PRD requiring confirmation to split into multiple changes
 
@@ -157,8 +157,8 @@ Agents should not skip these decision points; other unambiguous phase transition
 | `/smart-build` | 3. Plan and Build | Superpowers | Implementation plan, code commits |
 | `/smart-verify` | 4. Verify and Close | Both | Verification report, branch handling |
 | `/smart-archive` | 5. Archive | OpenSpec | delta→main spec sync, design doc markup, archive |
-| `/smart-hotfix` | Preset path | Both | Quick fix (skip brainstorming) |
-| `/smart-tweak` | Preset path | Both | Small change (skip brainstorming and full plan) |
+| `/smart-bugfix` | Mode path | Both | Smart Bug修复模式 - 根因分析 → Build → Verify → Archive |
+| `/smart-quick` | Mode path | Both | Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify |
 
 ```
 /smart
@@ -166,12 +166,12 @@ Agents should not skip these decision points; other unambiguous phase transition
 /smart-issue ──→ /smart-design ──→ /smart-build ──→ /smart-verify ──→ /smart-archive
   (OpenSpec)      (Superpowers)     (Superpowers)     (Both)          (OpenSpec)
 
-/smart-hotfix (preset, skip brainstorming)
-  issue ──→ build ──→ verify ──→ archive
+/smart-bugfix (Smart Bug修复模式 - 根因分析 → Build → Verify → Archive)
+  root cause analysis ──→ Build ──→ Verify ──→ Archive
     ↑ If upgrade triggered → block for confirmation → supplement Design Doc → return to full workflow
 
-/smart-tweak (preset, skip brainstorming and full plan)
-  issue ──→ lightweight build ──→ light verify ──→ archive
+/smart-quick (Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify)
+  issue ──→ quick build ──→ quick verify ──→ archive
     ↑ If upgrade triggered → block for confirmation → supplement Design Doc → return to full workflow
 ```
 
@@ -185,7 +185,7 @@ Agents should not skip these decision points; other unambiguous phase transition
 - Before `build → verify`, `build_mode` must be selected
 - `build_mode: subagent-driven-development` must also have `subagent_dispatch: confirmed`
 - Before full workflow leaves build phase, `tdd_mode` must be selected as `tdd` or `direct`
-- `build_mode: direct` is allowed by default only for `hotfix` / `tweak`; full workflow requires `direct_override: true`
+- `build_mode: direct` is allowed by default only for `bugfix` / `quick`; full workflow requires `direct_override: true`
 - `build_pause` is not an execution method and must not be written to `build_mode`
 - These constraints are enforced by both `smart-guard.sh build --apply` and `smart-state.sh transition <name> build-complete`
 
@@ -269,7 +269,7 @@ After loading smart, agents should run the variable assignments above once, then
 
 ### Best Practices
 
-1. **brainstorming cannot be skipped** — Every change must undergo deep design (except hotfix and tweak)
+1. **brainstorming cannot be skipped** — Every change must undergo deep design (except bugfix and quick)
 2. **delta spec is a living document** — Freely modify during phase 3, sync at archive
 3. **Handoff packages are generated by scripts** — OpenSpec → Superpowers context must be generated through `smart-handoff.sh` as compact traceable excerpts (use `--full` when needed), and validated by guard for source/hash/mode
 4. **Keep tasks.md in sync** — Check off each completed task
@@ -279,4 +279,4 @@ After loading smart, agents should run the variable assignments above once, then
 8. **Plan must associate with change** — File header contains `change:` and `design-doc:` metadata
 9. **Archive closure** — design doc and plan must mark `archived-with` status
 10. **Modifying existing features** — Just open a new change
-11. **Preset has limits** — Switch to full workflow promptly when hotfix/tweak meet upgrade conditions
+11. **Mode has limits** — Switch to full workflow promptly when bugfix/quick meet upgrade conditions

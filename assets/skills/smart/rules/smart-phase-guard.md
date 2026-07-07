@@ -30,7 +30,7 @@
 | `phase: build/verify` + proposal/design/tasks 任一缺失或为空 | 绕过 issue 空跳 | 回 `/smart-issue` 补齐三件套 |
 | `phase: archive` + `verify_result` ≠ `pass` | 绕过 verify 空跳 | 回 `/smart-verify` 完成验证 |
 
-预设例外：`workflow: hotfix/tweak` 本就跳过 design，`design_doc` 为空属正常，不算非法。
+模式例外：`workflow: bugfix/quick` 本就跳过 design，`design_doc` 为空属正常，不算非法。
 
 ### Skill 调用（不可用普通对话替代）
 

@@ -13,7 +13,7 @@ export type TranslationKey =
   | 'installingCG' | 'cgSkippedByUser'
   | 'setupComplete' | 'installed' | 'skippedLabel' | 'failedLabel' | 'failedStatus'
   | 'workingDirs' | 'getStarted'
-  | 'getStartedSmart' | 'getStartedHotfix' | 'getStartedTweak'
+  | 'getStartedSmart' | 'getStartedBugfix' | 'getStartedQuick'
   | 'selectNpmDeps'
   | 'npmDepOpenSpec' | 'npmDepOpenSpecInstalled'
   | 'npmDepSuperpowers' | 'npmDepSuperpowersInstalled' | 'npmDepSuperpowersHint'
@@ -69,8 +69,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     workingDirs: 'Working directories: docs/superpowers/specs/, docs/superpowers/plans/',
     getStarted: 'Get started:',
     getStartedSmart: '/smart "your idea"  — Start a new change with full workflow',
-    getStartedHotfix: '/smart-hotfix       — Quick bug fix (skip brainstorming)',
-    getStartedTweak: '/smart-tweak        — Small change (skip brainstorming and plan)',
+    getStartedBugfix: '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
+    getStartedQuick: '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
     selectNpmDeps: 'Select npm dependencies to install/upgrade:',
     npmDepOpenSpec: 'OpenSpec CLI (@fission-ai/openspec@latest)',
     npmDepOpenSpecInstalled: 'OpenSpec CLI (already installed — upgrade to latest)',
@@ -145,8 +145,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     workingDirs: '工作目录：docs/superpowers/specs/, docs/superpowers/plans/',
     getStarted: '开始使用：',
     getStartedSmart: '/smart "你的想法"  — 启动完整工作流',
-    getStartedHotfix: '/smart-hotfix       — 快速修复（跳过 brainstorming）',
-    getStartedTweak: '/smart-tweak        — 小改动（跳过 brainstorming 和完整 plan）',
+    getStartedBugfix: '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
+    getStartedQuick: '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
     selectNpmDeps: '选择要安装/升级的 npm 依赖：',
     npmDepOpenSpec: 'OpenSpec CLI (@fission-ai/openspec@latest)',
     npmDepOpenSpecInstalled: 'OpenSpec CLI（已安装 — 升级到最新版本）',

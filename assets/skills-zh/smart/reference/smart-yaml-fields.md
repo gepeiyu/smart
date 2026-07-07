@@ -3,7 +3,7 @@
 ## 核心字段
 
 ```yaml
-workflow: full                    # full | hotfix | tweak
+workflow: full                    # full | bugfix | quick
 phase: issue                       # issue | design | build | verify | archive
 auto_transition: true             # true | false
 ```

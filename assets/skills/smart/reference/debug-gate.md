@@ -2,7 +2,7 @@
 
 Canonical path: `smart/reference/debug-gate.md`
 
-This protocol is shared by smart sub-skills that directly modify code, including build, hotfix, and tweak. Enter the Debug Gate when a crash, unexpected behavior, test failure, or build failure appears while running the program, tests, build, or manual verification.
+This protocol is shared by smart sub-skills that directly modify code, including build, bugfix, and quick. Enter the Debug Gate when a crash, unexpected behavior, test failure, or build failure appears while running the program, tests, build, or manual verification.
 
 ## Core Rules
 

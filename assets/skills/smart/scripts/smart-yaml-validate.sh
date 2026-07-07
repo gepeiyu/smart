@@ -68,8 +68,8 @@ fi
 # Validate workflow
 if [ -n "$WORKFLOW" ]; then
   case "$WORKFLOW" in
-    full|hotfix|tweak) ;;
-    *) ERRORS="${ERRORS}  - Invalid workflow: ${WORKFLOW} (must be full|hotfix|tweak)\n"; VALID=1 ;;
+    full|bugfix|quick) ;;
+    *) ERRORS="${ERRORS}  - Invalid workflow: ${WORKFLOW} (must be full|bugfix|quick)\n"; VALID=1 ;;
   esac
 fi
 

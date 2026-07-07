@@ -23,8 +23,8 @@ Smart 是一个 **AI 工作流编排引擎**，通过状态机驱动的 5 阶段
 | `/smart-build` | Build 阶段 — 子代理调度、TDD 实现、代码审查、提交 |
 | `/smart-verify` | Verify 阶段 — 规范漂移检测、验证报告、分支处理 |
 | `/smart-archive` | Archive 阶段 — Delta 合并、注释、归档 |
-| `/smart-hotfix` | 热修复预设 — issue → build → verify → archive |
-| `/smart-tweak` | 微调预设 — issue → light build → light verify → archive |
+| `/smart-bugfix` | Smart Bug修复模式 - 根因分析 → Build → Verify → Archive |
+| `/smart-quick` | Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify |
 
 ## 核心机制
 
@@ -78,5 +78,5 @@ Smart 是一个 **AI 工作流编排引擎**，通过状态机驱动的 5 阶段
 - `smart-build` — Build 阶段
 - `smart-verify` — Verify 阶段
 - `smart-archive` — Archive 阶段
-- `smart-hotfix` — 热修复预设
-- `smart-tweak` — 微调预设
+- `smart-bugfix` — Smart Bug修复模式
+- `smart-quick` — Smart 快捷模式

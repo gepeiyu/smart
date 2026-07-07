@@ -30,7 +30,7 @@ Reading the `phase` field alone is not enough — you must also confirm **how** 
 | `phase: build/verify` + any of proposal/design/tasks missing or empty | Skipped issue | Return to `/smart-issue` to fill the three artifacts |
 | `phase: archive` + `verify_result` ≠ `pass` | Skipped verify | Return to `/smart-verify` to complete verification |
 
-Exception: `workflow: hotfix/tweak` intentionally skips design, so an empty `design_doc` is normal and not an illegal jump.
+Exception: `workflow: bugfix/quick` intentionally skips design, so an empty `design_doc` is normal and not an illegal jump.
 
 ### Skill Invocation (Cannot Replace with Normal Conversation)
 

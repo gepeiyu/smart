@@ -13,8 +13,8 @@ const SKILL_COMMANDS = [
   '/smart-build',
   '/smart-verify',
   '/smart-archive',
-  '/smart-hotfix',
-  '/smart-tweak',
+  '/smart-bugfix',
+  '/smart-quick',
 ];
 
 const program = new Command();
@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name('smart')
   .description('AI Workflow Orchestration — OpenSpec + Superpowers dual-star development pipeline')
-  .version('0.4.0', '-v, --version', 'Display version')
+  .version('0.1.8', '-v, --version', 'Display version')
   .helpOption('-h, --help', 'Display help')
   .addHelpText('after', `\nSkill Commands:\n  ${SKILL_COMMANDS.join('\n  ')}\n`);
 

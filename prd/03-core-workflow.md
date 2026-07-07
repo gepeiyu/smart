@@ -6,8 +6,8 @@
 /smart-issue ──→ /smart-design ──→ /smart-build ──→ /smart-verify ──→ /smart-archive
 (OpenSpec)       (Superpowers)     (Superpowers)     (Both)           (OpenSpec)
 
-/smart-hotfix:  issue ──→ build ──→ verify ──→ archive（跳过 Brainstorming）
-/smart-tweak:   issue ──→ light build ──→ light verify ──→ archive（跳过 Brainstorming + Plan）
+/smart-bugfix:  根因分析（优先 CodeGraph）──→ Build ──→ Verify ──→ Archive
+/smart-quick:   issue ──→ quick build ──→ quick verify ──→ archive（跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify）
 ```
 
 ## 3.2 各阶段详解
@@ -57,7 +57,7 @@
 1. 加载 Superpowers verification-before-completion 技能
 2. 检查 handoff hash 检测规范漂移
 3. 选择验证规模（`light` / `full`）
-   - Light：6 项检查清单（预设流程）
+   - Light：6 项检查清单（模式流程）
    - Full：需求满足度 + 设计一致性 + 实现验证
 4. 分支处理（合并/清理）
 5. 生成验证报告
@@ -81,7 +81,7 @@
 
 ```yaml
 # 核心
-workflow: full                    # full | hotfix | tweak
+workflow: full                    # full | bugfix | quick
 phase: build                      # issue | design | build | verify | archive
 auto_transition: true             # true | false
 

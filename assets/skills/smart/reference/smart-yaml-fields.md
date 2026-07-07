@@ -30,7 +30,7 @@ archived: false
 
 | Field | Meaning |
 |-------|---------|
-| `workflow` | `full`, `hotfix`, or `tweak` |
+| `workflow` | `full`, `bugfix`, or `quick` |
 | `phase` | Current phase: `issue`, `design`, `build`, `verify`, `archive` (init sets `issue`; guard handles transitions) |
 | `design_doc` | Associated Superpowers Design Doc path; may be empty |
 | `plan` | Associated Superpowers Plan path; may be empty |
@@ -38,8 +38,8 @@ archived: false
 | `build_mode` | Selected execution mode; may be empty |
 | `build_pause` | Build phase internal pause point. `null` = no pause, `plan-ready` = plan generated, paused for user model switch |
 | `subagent_dispatch` | `null` or `confirmed`. Only when the platform's real background subagent/Task/multi-agent dispatch capability is confirmed may `build_mode: subagent-driven-development` be written and used to leave the build phase |
-| `tdd_mode` | `tdd` or `direct`. Full workflow must select before leaving build. `tdd` forces write-failing-test-first per task; `direct` skips TDD enforcement. hotfix/tweak default to `direct` |
-| `isolation` | `branch` or `worktree`, workspace isolation mode. Full init may be `null` but only until `/smart-build` Step 3; hotfix/tweak default to `branch` |
+| `tdd_mode` | `tdd` or `direct`. Full workflow must select before leaving build. `tdd` forces write-failing-test-first per task; `direct` skips TDD enforcement. bugfix/quick default to `direct` |
+| `isolation` | `branch` or `worktree`, workspace isolation mode. Full init may be `null` but only until `/smart-build` Step 3; bugfix/quick default to `branch` |
 | `verify_mode` | `light` or `full`; may be empty |
 | `auto_transition` | `true` or `false`. Only controls whether to automatically invoke the next skill after phase guard advances phase; `false` outputs `manual` from `smart-state next`, pausing next-skill invocation but not blocking phase field updates |
 | `verify_result` | `pending`, `pass`, or `fail` |
@@ -63,6 +63,6 @@ archived: false
 - Before `build → verify`, `build_mode` must be selected
 - `build_mode: subagent-driven-development` requires `subagent_dispatch: confirmed`
 - Full workflow must select `tdd_mode` as `tdd` or `direct` before leaving build
-- `build_mode: direct` defaults to `hotfix`/`tweak` only; full workflow requires `direct_override: true`
+- `build_mode: direct` defaults to `bugfix`/`quick` only; full workflow requires `direct_override: true`
 - `build_pause` is not an execution mode; must not be written to `build_mode`
 - These constraints exist in both `smart-guard.sh build --apply` and `smart-state.sh transition <name> build-complete`

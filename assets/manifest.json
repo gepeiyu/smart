@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.1.8",
   "skills": [
     "smart/SKILL.md",
     "smart/reference/auto-transition.md",
@@ -22,8 +22,8 @@
     "smart-build/SKILL.md",
     "smart-verify/SKILL.md",
     "smart-archive/SKILL.md",
-    "smart-hotfix/SKILL.md",
-    "smart-tweak/SKILL.md"
+    "smart-bugfix/SKILL.md",
+    "smart-quick/SKILL.md"
   ],
   "rules": [
     "smart/rules/smart-phase-guard.md"
