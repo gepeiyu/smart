@@ -4,6 +4,7 @@
 # permit them. Called by the AI platform's PreToolUse hook mechanism.
 #
 # Usage: smart-hook-guard.sh <file-path> [tool-type]
+# Also accepts PreToolUse JSON payload on stdin.
 #
 # Whitelist paths (always allowed):
 #   openspec/*
@@ -22,25 +23,69 @@ if [ -z "${SMART_STATE:-}" ]; then
   source "$SMART_ENV_DIR/smart-env.sh" --quiet
 fi
 
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
+}
+
+allow() {
+  printf '{"decision":"approve"}\n'
+  exit 0
+}
+
+block() {
+  printf '{"decision":"block","reason":"%s"}\n' "$(json_escape "$1")"
+  exit 0
+}
+
+extract_json_string() {
+  local json="$1"
+  local key="$2"
+  printf '%s' "$json" | sed -nE "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\1/p" | head -n 1
+}
+
 # ── Help ───────────────────────────────────────────────────────────────
-if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   echo "Usage: smart-hook-guard.sh <file-path> [tool-type]"
   echo ""
   echo "PreToolUse hook: blocks writes in wrong phase."
-  echo "Returns 0 (allowed) or 1 (blocked)."
+  echo "Returns a JSON decision object for hook callers."
   echo ""
   echo "Allowed paths (no phase check):"
   echo "  openspec/*  docs/superpowers/*  .smart/*  .claude/*"
   exit 0
 fi
 
-TARGET_FILE="$1"
+PAYLOAD=""
+if [ $# -eq 0 ]; then
+  PAYLOAD="$(cat 2>/dev/null || true)"
+fi
+
+TARGET_FILE="${1:-}"
 TOOL_TYPE="${2:-write}"
+if [ -n "$PAYLOAD" ]; then
+  TARGET_FILE="$(extract_json_string "$PAYLOAD" "file_path")"
+  if [ -z "$TARGET_FILE" ]; then TARGET_FILE="$(extract_json_string "$PAYLOAD" "path")"; fi
+  TOOL_TYPE="$(extract_json_string "$PAYLOAD" "tool_name")"
+  if [ -z "$TOOL_TYPE" ]; then TOOL_TYPE="$(extract_json_string "$PAYLOAD" "tool")"; fi
+  if [ -z "$TOOL_TYPE" ]; then TOOL_TYPE="write"; fi
+fi
+
+if [ -z "$TARGET_FILE" ]; then
+  allow
+fi
+
+TOOL_TYPE="$(printf '%s' "$TOOL_TYPE" | tr '[:upper:]' '[:lower:]')"
 
 # ── Only block write operations ────────────────────────────────────────
 case "$TOOL_TYPE" in
   write|edit|create|modify) ;;
-  *) exit 0 ;; # read-only tools are always allowed
+  *) allow ;; # read-only tools are always allowed
 esac
 
 # ── Normalize path (remove leading ./ etc.) ────────────────────────────
@@ -49,7 +94,7 @@ NORMALIZED_PATH="${TARGET_FILE#./}"
 # ── Whitelist check: always allowed paths ──────────────────────────────
 case "$NORMALIZED_PATH" in
   openspec/*|docs/superpowers/*|.smart/*|.claude/*)
-    exit 0
+    allow
     ;;
 esac
 
@@ -64,13 +109,13 @@ if [ -z "$CHANGE_NAME" ]; then
   # Not in a change directory — this is a general code file.
   # Block in build/verify phase if not whitelisted above.
   # Without a change context, allow it (conservative).
-  exit 0
+  allow
 fi
 
 SMART_FILE="openspec/changes/${CHANGE_NAME}/.smart.yaml"
 if [ ! -f "$SMART_FILE" ]; then
   # No .smart.yaml yet — allow (pre-init)
-  exit 0
+  allow
 fi
 
 # ── Read current phase ─────────────────────────────────────────────────
@@ -89,27 +134,22 @@ fi
 case "$CURRENT_PHASE" in
   issue|design)
     # In issue/design phase, code file writes are blocked
-    echo "BLOCKED: Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'." >&2
-    echo "Allowed paths: openspec/*  docs/superpowers/*  .smart/*  .claude/*" >&2
-    echo "Use /smart-issue or /smart-design phase commands." >&2
-    exit 1
+    block "Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'. Allowed paths: openspec/*  docs/superpowers/*  .smart/*  .claude/*. Use /smart-issue or /smart-design phase commands."
     ;;
   build)
     # Build phase allows code writes — pass through
-    exit 0
+    allow
     ;;
   verify)
     # Verify phase allows limited writes (fixes during verification)
-    exit 0
+    allow
     ;;
   archive)
     # Archive phase blocks code writes
-    echo "BLOCKED: Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'." >&2
-    echo "Change is archived or being archived." >&2
-    exit 1
+    block "Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'. Change is archived or being archived."
     ;;
   *)
     # Unknown phase — allow
-    exit 0
+    allow
     ;;
 esac

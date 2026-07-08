@@ -1,6 +1,6 @@
 {
   "name": "@gepeiyu/smart",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "AI Workflow Orchestration — OpenSpec + Superpowers dual-star development pipeline",
   "keywords": ["smart", "openspec", "superpowers", "codegraph", "workflow"],
   "license": "MIT",
