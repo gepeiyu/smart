@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name('smart')
   .description('AI Workflow Orchestration — OpenSpec + Superpowers dual-star development pipeline')
-  .version('0.1.10', '-v, --version', 'Display version')
+  .version('0.1.12', '-v, --version', 'Display version')
   .helpOption('-h, --help', 'Display help')
   .addHelpText('after', `\nSkill Commands:\n  ${SKILL_COMMANDS.join('\n  ')}\n`);
 
