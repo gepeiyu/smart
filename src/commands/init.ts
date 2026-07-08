@@ -8,7 +8,7 @@ import {
   copySmartSkillsForPlatform, copySmartRulesForPlatform, installSmartHooksForPlatform, createWorkingDirs,
   type LanguageConfig,
 } from '../core/skills.js';
-import { installOpenSpec, isCommandAvailable } from '../core/openspec.js';
+import { installOpenSpec, resolveOpenSpecCommand } from '../core/openspec.js';
 import { installSuperpowersForPlatforms } from '../core/superpowers.js';
 import { hasCodegraphProjectIndex, installCodegraph, resolveCodegraphCommand } from '../core/codegraph.js';
 import { printVersionInfo } from '../core/version.js';
@@ -51,8 +51,16 @@ async function selectPlatforms(detected: Set<string>, options: InitOptions, lang
     name: `${p.name}${detected.has(p.id) ? ` (${t(lang, 'detected')})` : ''}`,
     value: p.id, checked: detected.has(p.id),
   }));
-  if (options.yes) { const selected = [...detected]; return selected.length > 0 ? selected : PLATFORMS.map((p) => p.id); }
-  return platformSelectPrompt({ message: t(lang, 'selectPlatforms'), choices });
+  if (options.yes) return [...detected];
+  return platformSelectPrompt({
+    message: t(lang, 'selectPlatforms'),
+    instructions: [
+      ...(detected.size === 0 ? [t(lang, 'selectPlatformsNoDetected')] : []),
+      t(lang, 'selectPlatformsHelp'),
+    ],
+    choices,
+    validate: (items) => items.length > 0 || t(lang, 'selectPlatformsRequired'),
+  });
 }
 
 async function promptOverwriteChoice(componentName: string, platformName: string, lang: string): Promise<'overwrite' | 'skip'> {
@@ -90,8 +98,8 @@ interface NpmDepState { id: NpmDepId; installed: boolean; }
 async function selectNpmDeps(projectPath: string, spPlatformIds: string[], options: InitOptions, lang: string): Promise<Set<NpmDepId>> {
   if (options.deps === false) return new Set();
 
-  const openSpecInstalled = isCommandAvailable('openspec');
-  const codegraphInstalled = (await hasCodegraphProjectIndex(projectPath)) || resolveCodegraphCommand() !== null;
+  const openSpecInstalled = resolveOpenSpecCommand(projectPath) !== null;
+  const codegraphInstalled = (await hasCodegraphProjectIndex(projectPath)) || resolveCodegraphCommand(projectPath) !== null;
   const superpowersInstalled = spPlatformIds.length === 0;
   const states: NpmDepState[] = [
     { id: 'openspec', installed: openSpecInstalled },
@@ -245,8 +253,8 @@ export async function initCommand(targetPath: string, options: InitOptions = {})
   const shouldInstallCodegraph = !options.json && !codegraphAlreadyIndexed && shouldInstallCodegraphCli;
   if (shouldInstallCodegraph) {
     log(`\n  ${t(lang, 'installingCG')}`);
-    installCodegraph(scope ?? 'project', projectPath);
-    const cgGlobalStatus: InstallStatus = 'installed';
+    const codegraphInstalled = installCodegraph(scope ?? 'project', projectPath);
+    const cgGlobalStatus: InstallStatus = codegraphInstalled ? 'installed' : 'failed';
     log(`  CodeGraph: ${cgGlobalStatus}`);
     for (const r of results) r.codegraph = cgGlobalStatus;
   } else if (!options.json && codegraphAlreadyIndexed) { log('\n  CodeGraph: skipped (existing .codegraph index detected)'); }

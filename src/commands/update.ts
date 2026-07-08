@@ -186,7 +186,7 @@ export async function updateCommand(targetPath: string, options: UpdateOptions =
   const codegraphAlreadyIndexed = await hasCodegraphProjectIndex(projectPath);
   if (options.json) { codegraphStatus = 'skipped'; }
   else if (codegraphAlreadyIndexed) { log('\n  CodeGraph: skipped (existing .codegraph index detected)'); }
-  else { const shouldInstallCodegraph = options.skipNpm ? false : options.yes === true || await promptCodegraphInstall(lang); if (shouldInstallCodegraph) { log(`\n  ${t(lang, 'installingCG')}`); installCodegraph(primaryScope, projectPath); codegraphStatus = 'installed'; log(`  CodeGraph: ${codegraphStatus}`); } else { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); } }
+  else { const shouldInstallCodegraph = options.skipNpm ? false : options.yes === true || await promptCodegraphInstall(lang); if (shouldInstallCodegraph) { log(`\n  ${t(lang, 'installingCG')} (${primaryScope} scope)`); const installed = installCodegraph(primaryScope, projectPath); codegraphStatus = installed ? 'installed' : 'failed'; log(`  CodeGraph: ${codegraphStatus}`); } else { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); } }
 
   if (options.json) {
     console.log(JSON.stringify({

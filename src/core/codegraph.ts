@@ -9,28 +9,42 @@ export async function hasCodegraphProjectIndex(projectDir: string): Promise<bool
   return entries.length > 0;
 }
 
-export function resolveCodegraphCommand(): string {
-  const candidates = ['codegraph', 'npx codegraph'];
-  for (const cmd of candidates) {
-    try {
-      const [base, ...args] = cmd.split(' ');
-      execFileSync(base, [...args, '--version'], { encoding: 'utf-8', stdio: 'pipe', timeout: 5000 });
-      return cmd;
-    } catch { /* cmd not available */ }
-  }
-  return '';
+function getLocalBinPath(projectPath: string, command: string): string {
+  return path.join(projectPath, 'node_modules', '.bin', process.platform === 'win32' ? `${command}.cmd` : command);
 }
 
-export function installCodegraph(scope: 'global' | 'project', cwd?: string): void {
-  if (scope === 'global') {
-    const globalCmd = resolvePnpmGlobalCommand();
-    if (globalCmd) {
-      execSync(`${globalCmd} add -g @codegraph/cli`, { stdio: 'inherit', timeout: 120000 });
-    } else {
-      execSync('npm install -g @codegraph/cli', { stdio: 'inherit', timeout: 120000 });
+function canRunCommand(command: string, args: string[] = ['--version']): boolean {
+  try {
+    execFileSync(command, args, { encoding: 'utf-8', stdio: 'pipe', timeout: 5000 });
+    return true;
+  } catch { return false; }
+}
+
+export function resolveCodegraphCommand(projectPath?: string): { command: string; location: 'local' | 'global' | 'npx' } | null {
+  if (projectPath) {
+    const localCommand = getLocalBinPath(projectPath, 'codegraph');
+    if (canRunCommand(localCommand)) return { command: localCommand, location: 'local' };
+  }
+  if (canRunCommand('codegraph')) return { command: 'codegraph', location: 'global' };
+  if (canRunCommand('npx', ['codegraph', '--version'])) return { command: 'npx codegraph', location: 'npx' };
+  return null;
+}
+
+export function installCodegraph(scope: 'global' | 'project', cwd?: string): boolean {
+  try {
+    if (scope === 'global') {
+      const globalCmd = resolvePnpmGlobalCommand();
+      if (globalCmd) {
+        execSync(`${globalCmd} add -g @colbymchenry/codegraph`, { stdio: 'inherit', timeout: 120000 });
+      } else {
+        execSync('npm install -g @colbymchenry/codegraph', { stdio: 'inherit', timeout: 120000 });
+      }
+    } else if (cwd) {
+      execSync('npm install @colbymchenry/codegraph', { cwd, stdio: 'inherit', timeout: 120000 });
     }
-  } else if (cwd) {
-    execSync('npm install @codegraph/cli', { cwd, stdio: 'inherit', timeout: 120000 });
+    return resolveCodegraphCommand(cwd) !== null;
+  } catch {
+    return false;
   }
 }
 

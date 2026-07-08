@@ -2,8 +2,8 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { fileExists, readDir } from '../utils/file-system.js';
 import { detectPlatforms } from '../core/detect.js';
-import { isCommandAvailable } from '../core/openspec.js';
-import { hasCodegraphProjectIndex } from '../core/codegraph.js';
+import { resolveOpenSpecCommand } from '../core/openspec.js';
+import { hasCodegraphProjectIndex, resolveCodegraphCommand } from '../core/codegraph.js';
 
 interface CheckResult {
   name: string;
@@ -11,12 +11,12 @@ interface CheckResult {
   message: string;
 }
 
-function checkOpenSpecCLI(): CheckResult {
-  const available = isCommandAvailable('openspec');
+function checkOpenSpecCLI(cwd: string): CheckResult {
+  const command = resolveOpenSpecCommand(cwd);
   return {
     name: 'OpenSpec CLI',
-    status: available ? 'pass' : 'fail',
-    message: available ? 'OpenSpec CLI is installed' : 'OpenSpec CLI is not installed. Run: npm install -g @fission-ai/openspec@latest',
+    status: command ? 'pass' : 'fail',
+    message: command ? `OpenSpec CLI is installed (${command.location})` : 'OpenSpec CLI is not installed. Run: npm install -g @fission-ai/openspec@latest',
   };
 }
 
@@ -78,11 +78,14 @@ async function checkScripts(cwd: string): Promise<CheckResult> {
 }
 
 async function checkCodegraph(cwd: string): Promise<CheckResult> {
+  const command = resolveCodegraphCommand(cwd);
   const hasIndex = await hasCodegraphProjectIndex(cwd);
+  const cliStatus = command ? `CLI installed (${command.location})` : 'CLI not installed';
+  const indexStatus = hasIndex ? 'project index found' : 'project index not found';
   return {
     name: 'CodeGraph',
-    status: hasIndex ? 'pass' : 'warn',
-    message: hasIndex ? 'CodeGraph project index found' : 'CodeGraph not indexed. Run: codegraph index',
+    status: command && hasIndex ? 'pass' : command ? 'warn' : 'fail',
+    message: `${cliStatus}; ${indexStatus}`,
   };
 }
 
@@ -140,7 +143,7 @@ export async function doctorCommand(targetPath: string, opts?: Record<string, un
   if (!jsonOutput) console.log(`Smart Doctor — ${cwd}\n`);
 
   const results: CheckResult[] = [
-    checkOpenSpecCLI(),
+    checkOpenSpecCLI(cwd),
     await checkWorkingDirs(cwd),
     await checkSkills(cwd),
     await checkScripts(cwd),

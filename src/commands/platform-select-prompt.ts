@@ -11,6 +11,7 @@ interface CheckboxChoice {
 interface CheckboxConfig {
   message: string;
   choices: CheckboxChoice[];
+  instructions?: string[];
   pageSize?: number;
   searchable?: boolean;
   validate?: (items: string[]) => boolean | string;
@@ -23,12 +24,13 @@ function eraseLines(count: number): void {
 }
 
 export async function platformSelectPrompt(config: CheckboxConfig): Promise<string[]> {
-  const { message, choices } = config;
+  const { message, choices, instructions = [] } = config;
   const selected = new Set(choices.filter(c => c.checked && !c.disabled).map(c => c.value));
   let filterText = '';
   let cursorPos = 0;
   let currentPage = 0;
   let renderedLineCount = 0;
+  let validationMessage = '';
   const pageSize = config.pageSize || 10;
 
   const filtered = (): CheckboxChoice[] => {
@@ -50,6 +52,7 @@ export async function platformSelectPrompt(config: CheckboxConfig): Promise<stri
 
     const lines: string[] = [
       `? ${message}`,
+      ...instructions.map((instruction) => `  ${instruction}`),
       `> ${filterText ? `Search: ${filterText}` : 'Type to search...'}`,
     ];
 
@@ -66,6 +69,7 @@ export async function platformSelectPrompt(config: CheckboxConfig): Promise<stri
       lines.push(`  (Page ${currentPage + 1}/${totalPages})`);
     }
 
+    if (validationMessage) lines.push(`  ${validationMessage}`);
     lines.push('  (a) Select All  (i) Invert  (Enter) Confirm');
     process.stdout.write(lines.join('\n') + '\n');
     renderedLineCount = lines.length;
@@ -105,8 +109,16 @@ export async function platformSelectPrompt(config: CheckboxConfig): Promise<stri
     const key = await readKey();
 
     if (key === '\r' || key === '\n') {
-      break;
+      const result = Array.from(selected);
+      const validation = config.validate?.(result) ?? true;
+      if (validation === true) break;
+      validationMessage = typeof validation === 'string' ? validation : 'Invalid selection.';
+      eraseLines(renderedLineCount);
+      render();
+      continue;
     }
+
+    validationMessage = '';
 
     if (key === '\x03') {
       cleanup([]);

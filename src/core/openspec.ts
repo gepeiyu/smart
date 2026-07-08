@@ -19,11 +19,12 @@ function getNpmExecutable(platform: NodeJS.Platform = process.platform): string 
 function buildOpenSpecInitInvocation(
   projectPath: string, toolIds: string[], scope: InstallScope,
   homeDir = os.homedir(), includeProfileFlag = true,
+  command = 'openspec',
 ): { command: string; args: string[] } {
   const targetPath = scope === 'global' ? homeDir : projectPath;
   const args = ['init', targetPath, '--tools', toolIds.join(',')];
   if (includeProfileFlag) args.push('--profile', 'custom');
-  return { command: 'openspec', args };
+  return { command, args };
 }
 
 const ALL_WORKFLOWS_CONFIG = JSON.stringify({
@@ -103,12 +104,30 @@ function isCommandAvailable(command: string): boolean {
   } catch { return false; }
 }
 
+function getLocalBinPath(projectPath: string, command: string): string {
+  return path.join(projectPath, 'node_modules', '.bin', process.platform === 'win32' ? `${command}.cmd` : command);
+}
+
+function isExecutableAvailable(command: string): boolean {
+  try {
+    execFileSync(command, ['--version'], { stdio: 'ignore', timeout: 10_000 });
+    return true;
+  } catch { return false; }
+}
+
+function resolveOpenSpecCommand(projectPath: string): { command: string; location: 'local' | 'global' } | null {
+  const localCommand = getLocalBinPath(projectPath, 'openspec');
+  if (fs.existsSync(localCommand) && isExecutableAvailable(localCommand)) return { command: localCommand, location: 'local' };
+  if (isCommandAvailable('openspec')) return { command: 'openspec', location: 'global' };
+  return null;
+}
+
 async function ensureOpenSpecCli(
   scope: InstallScope, projectPath: string, shouldInstall = true,
 ): Promise<'ready' | 'missing' | 'failed'> {
-  const alreadyInstalled = isCommandAvailable('openspec');
-  if (!shouldInstall) return alreadyInstalled ? 'ready' : 'missing';
-  const label = alreadyInstalled ? 'Upgrading' : 'Installing';
+  const existingCommand = resolveOpenSpecCommand(projectPath);
+  if (!shouldInstall) return existingCommand ? 'ready' : 'missing';
+  const label = existingCommand ? 'Upgrading' : 'Installing';
   console.warn(`    ${label} OpenSpec CLI...`);
   try {
     const npmArgs = scope === 'global'
@@ -118,10 +137,10 @@ async function ensureOpenSpecCli(
       cwd: projectPath, stdio: 'inherit', timeout: 120_000,
       shell: process.platform === 'win32',
     });
-    return isCommandAvailable('openspec') ? 'ready' : 'failed';
+    return resolveOpenSpecCommand(projectPath) ? 'ready' : 'failed';
   } catch (error) {
-    if (alreadyInstalled) {
-      console.warn(`    OpenSpec upgrade failed, using existing version: ${(error as Error).message}`);
+    if (existingCommand) {
+      console.warn(`    OpenSpec upgrade failed, using existing ${existingCommand.location} version: ${(error as Error).message}`);
       return 'ready';
     }
     console.error(`    Failed to install OpenSpec CLI: ${(error as Error).message}`);
@@ -168,6 +187,11 @@ async function installOpenSpec(
     return 'failed';
   }
   if (cliStatus === 'missing') return 'skipped';
+  const openspecCommand = resolveOpenSpecCommand(projectPath);
+  if (!openspecCommand) {
+    console.error('    OpenSpec CLI not available. Install manually: npm install -g @fission-ai/openspec@latest');
+    return 'failed';
+  }
 
   const unknownIds = toolIds.filter((id) => !VALID_TOOL_IDS.has(id));
   if (unknownIds.length > 0) throw new Error(`Unknown tool IDs: ${unknownIds.join(', ')}`);
@@ -178,7 +202,7 @@ async function installOpenSpec(
     const openspecEnv = createOpenSpecAllWorkflowsEnv();
     configHome = openspecEnv.configHome;
     configBackup = writeAllWorkflowsToDefaultConfig();
-    const invocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope);
+    const invocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope, os.homedir(), true, openspecCommand.command);
     try {
       execFileSync(invocation.command, invocation.args, {
         cwd: projectPath, env: openspecEnv.env,
@@ -189,7 +213,7 @@ async function installOpenSpec(
       const stderrText = (firstError as { stderr?: Buffer }).stderr?.toString() ?? '';
       if (stderrText.includes('unknown option') && stderrText.includes('--profile')) {
         console.warn('    OpenSpec does not support --profile flag, retrying without it...');
-        const fallbackInvocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope, os.homedir(), false);
+        const fallbackInvocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope, os.homedir(), false, openspecCommand.command);
         execFileSync(fallbackInvocation.command, fallbackInvocation.args, {
           cwd: projectPath, env: openspecEnv.env,
           stdio: 'inherit', timeout: 120_000,
@@ -210,5 +234,5 @@ async function installOpenSpec(
 }
 
 export {
-  installOpenSpec, isCommandAvailable, buildOpenSpecInitInvocation, getNpmExecutable, migrateOpenCodeOpenSpecPaths,
+  installOpenSpec, isCommandAvailable, buildOpenSpecInitInvocation, getNpmExecutable, migrateOpenCodeOpenSpecPaths, resolveOpenSpecCommand,
 };

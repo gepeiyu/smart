@@ -3,7 +3,7 @@ export type Language = 'en' | 'zh';
 export type TranslationKey =
   | 'settingUp' | 'installScope' | 'scopeProject' | 'scopeGlobal'
   | 'languagePrompt' | 'selectPlatforms' | 'selectedPlatforms' | 'noneSelected'
-  | 'selectPlatformsRequired' | 'detected' | 'noPlatforms'
+  | 'selectPlatformsRequired' | 'selectPlatformsHelp' | 'selectPlatformsNoDetected' | 'detected' | 'noPlatforms'
   | 'overwriteChoice' | 'overwrite' | 'skip'
   | 'bulkOverwrite' | 'overwriteAll' | 'skipAll' | 'choosePer'
   | 'installingOS' | 'osSkippedNoCli' | 'allSkipped'
@@ -38,6 +38,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     selectedPlatforms: 'Selected:',
     noneSelected: 'none',
     selectPlatformsRequired: 'Select at least one platform.',
+    selectPlatformsHelp: 'Use ↑/↓ to move, Space to toggle, Enter to confirm.',
+    selectPlatformsNoDetected: 'No platforms detected. Select at least one platform to continue.',
     detected: 'detected',
     noPlatforms: 'No platforms selected. Exiting.',
     overwriteChoice: 'What to do?',
@@ -114,6 +116,8 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     selectedPlatforms: '已选择：',
     noneSelected: '无',
     selectPlatformsRequired: '请至少选择一个平台。',
+    selectPlatformsHelp: '使用 ↑/↓ 移动，空格选择，回车确认。',
+    selectPlatformsNoDetected: '未检测到平台，请至少选择一个平台后继续。',
     detected: '已检测到',
     noPlatforms: '未选择任何平台，退出。',
     overwriteChoice: '如何处理？',

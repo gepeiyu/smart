@@ -11,7 +11,12 @@ vi.mock('child_process', () => ({
   execSync: vi.fn(),
 }));
 
+vi.mock('fs', () => ({
+  existsSync: vi.fn(),
+}));
+
 import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
 import { hasCodegraphProjectIndex, resolveCodegraphCommand, resolvePnpmGlobalCommand } from '../src/core/codegraph.js';
 
 describe('codegraph', () => {
@@ -42,16 +47,25 @@ describe('codegraph', () => {
   });
 
   describe('resolveCodegraphCommand', () => {
-    it('returns codegraph when available', () => {
+    it('returns local codegraph when project bin is available', () => {
+      vi.mocked(existsSync).mockReturnValue(true);
       vi.mocked(execFileSync).mockImplementationOnce(() => '1.0.0' as unknown as void);
-      const result = resolveCodegraphCommand();
-      expect(result).toBe('codegraph');
+      const result = resolveCodegraphCommand('/project');
+      expect(result).toEqual({ command: '/project/node_modules/.bin/codegraph', location: 'local' });
     });
 
-    it('returns empty string when not available', () => {
+    it('returns global codegraph when available', () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      vi.mocked(execFileSync).mockImplementationOnce(() => '1.0.0' as unknown as void);
+      const result = resolveCodegraphCommand();
+      expect(result).toEqual({ command: 'codegraph', location: 'global' });
+    });
+
+    it('returns null when not available', () => {
+      vi.mocked(existsSync).mockReturnValue(false);
       vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
       const result = resolveCodegraphCommand();
-      expect(result).toBe('');
+      expect(result).toBeNull();
     });
   });
 
