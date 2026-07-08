@@ -30,6 +30,8 @@ description: "Smart Design — Phase 2 of the Smart workflow. Deep design phase:
 
 ### Step 3: Create Design Doc
 
+Before writing `docs/superpowers/` artifacts, read `.smart/config.yaml` if it exists and use `smart_language` as the document language (`zh` = Chinese, `en` = English). If it is missing, use the language of the user request that triggered the workflow.
+
 1. Write `docs/superpowers/specs/YYYY-MM-DD-topic-design.md` — the technical RFC
 2. Create or update delta spec files in `openspec/changes/<name>/specs/`
 3. Update tasks.md with refined implementation tasks

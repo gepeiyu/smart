@@ -13,6 +13,10 @@ Smart 是一个 **AI 工作流编排引擎**，通过状态机驱动的 5 阶段
 /smart-issue ──→ /smart-design ──→ /smart-build ──→ /smart-verify ──→ /smart-archive
 ```
 
+## 输出语言规则
+
+创建或更新工作流产物前，优先读取 `.smart/config.yaml`。如果 `smart_language: zh`，OpenSpec artifacts 以及 `docs/superpowers/` 下的文档都必须使用中文生成；如果 `smart_language: en`，则使用英文生成。如果该字段不存在，则回退为触发本次工作流的用户请求语言。恢复已有变更时，如果现有产物已有明确主导语言，应保持该语言，除非用户明确要求切换。
+
 ## 命令
 
 | 命令 | 说明 |

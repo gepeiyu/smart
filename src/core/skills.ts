@@ -380,7 +380,11 @@ async function installKiroHooks(
   return { installed: true };
 }
 
-async function createWorkingDirs(projectPath: string): Promise<void> {
+function normalizeSmartLanguage(language: string | undefined): 'en' | 'zh' {
+  return language === 'zh' ? 'zh' : 'en';
+}
+
+async function createWorkingDirs(projectPath: string, language?: string): Promise<void> {
   const dirs = [
     path.join(projectPath, 'docs', 'superpowers', 'specs'),
     path.join(projectPath, 'docs', 'superpowers', 'plans'),
@@ -389,7 +393,10 @@ async function createWorkingDirs(projectPath: string): Promise<void> {
   for (const dir of dirs) await ensureDir(dir);
   const configPath = path.join(projectPath, '.smart', 'config.yaml');
   if (!(await fileExists(configPath))) {
+    const smartLanguage = normalizeSmartLanguage(language);
     await writeFile(configPath, [
+      '# smart_language: en | zh',
+      `smart_language: ${smartLanguage}`,
       '# context_compression: off | beta',
       'context_compression: off',
       '# review_mode: off | standard | thorough',

@@ -57,6 +57,17 @@ archived: false
 2. **项目配置**：`.smart/config.yaml`
 3. **变更配置**（最低）：`openspec/changes/<name>/.smart.yaml`
 
+## 项目配置字段
+
+`.smart/config.yaml` 支持这些项目级默认值：
+
+| 字段 | 含义 |
+|------|------|
+| `smart_language` | `en` 或 `zh`，控制 Smart 工作流生成 OpenSpec artifacts 与 `docs/superpowers/` 文档时默认使用的语言 |
+| `context_compression` | `off` 或 `beta` |
+| `review_mode` | `off`、`standard` 或 `thorough` |
+| `auto_transition` | `true` 或 `false` |
+
 ## 状态转换
 
 ```

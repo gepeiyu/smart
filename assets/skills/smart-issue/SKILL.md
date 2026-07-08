@@ -31,6 +31,8 @@ description: "Smart Issue — Phase 1 of the Smart workflow. Initializes new cha
 
 ### Step 3: Create Artifacts
 
+Before writing artifacts, read `.smart/config.yaml` if it exists and use `smart_language` as the artifact language (`zh` = Chinese, `en` = English). If it is missing, use the language of the user request that triggered the workflow.
+
 1. Write `proposal.md` — Why and What
 2. Write `design.md` — High-level architecture decisions
 3. Write `tasks.md` — Task checklist

@@ -83,7 +83,7 @@ describe('createWorkingDirs', () => {
     vi.mocked(ensureDir).mockResolvedValue(undefined);
     vi.mocked(writeFile).mockResolvedValue(undefined);
 
-    await createWorkingDirs('/project');
+    await createWorkingDirs('/project', 'zh');
 
     expect(ensureDir).toHaveBeenCalledTimes(3);
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'docs', 'superpowers', 'specs'));
@@ -91,7 +91,21 @@ describe('createWorkingDirs', () => {
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', '.smart'));
     expect(writeFile).toHaveBeenCalledWith(
       path.join('/project', '.smart', 'config.yaml'),
-      expect.stringContaining('context_compression: off'),
+      expect.stringContaining('smart_language: zh'),
+      'utf-8',
+    );
+  });
+
+  it('defaults generated document language to English', async () => {
+    vi.mocked(fileExists).mockResolvedValue(false);
+    vi.mocked(ensureDir).mockResolvedValue(undefined);
+    vi.mocked(writeFile).mockResolvedValue(undefined);
+
+    await createWorkingDirs('/project');
+
+    expect(writeFile).toHaveBeenCalledWith(
+      path.join('/project', '.smart', 'config.yaml'),
+      expect.stringContaining('smart_language: en'),
       'utf-8',
     );
   });

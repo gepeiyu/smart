@@ -18,6 +18,8 @@ description: Smart Issue 阶段 — 需求澄清、PRD 拆分、变更创建
 5. **产物生成** — 使用 OpenSpec 逐 artifact JSON 指令生成 proposal.md / design.md / tasks.md
 6. **守卫验证** — 验证 artifacts 存在，执行 `guard --apply issue-complete`
 
+生成产物前，优先读取 `.smart/config.yaml` 中的 `smart_language`：`zh` 使用中文，`en` 使用英文；字段不存在时，回退为触发本次工作流的用户请求语言。
+
 ## 产物
 
 | 产物 | 说明 |

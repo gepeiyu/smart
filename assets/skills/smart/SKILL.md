@@ -22,7 +22,7 @@ Agents need only read this section for decision-making. Refer to the Reference A
 
 ### Output Language Rule
 
-Use the language of the user request that triggered this workflow as the default output language. When resuming an existing change with a clear dominant artifact language, preserve that language unless the user explicitly asks to switch.
+Before creating or updating workflow artifacts, read `.smart/config.yaml` when it exists. If `smart_language: zh`, generate OpenSpec artifacts and docs under `docs/superpowers/` in Chinese. If `smart_language: en`, generate them in English. If the field is absent, use the language of the user request that triggered this workflow as the default output language. When resuming an existing change with a clear dominant artifact language, preserve that language unless the user explicitly asks to switch.
 
 ### Automatic Phase Detection
 

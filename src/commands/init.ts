@@ -260,7 +260,7 @@ export async function initCommand(targetPath: string, options: InitOptions = {})
   } else if (!options.json && codegraphAlreadyIndexed) { log('\n  CodeGraph: skipped (existing .codegraph index detected)'); }
   else if (!options.json) { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); }
 
-  if (scope === 'project') await createWorkingDirs(projectPath);
+  if (scope === 'project') await createWorkingDirs(projectPath, language.id);
 
   if (options.json) {
     console.log(JSON.stringify({ projectPath, scope, language: language.id, selectedPlatforms: selectedPlatformIds, results: results.map((result) => ({ platform: result.platform.id, platformName: result.platform.name, openspec: result.openspec, superpowers: result.superpowers, smart: result.smart, codegraph: result.codegraph })), workingDirsCreated: scope === 'project' }, null, 2));
