@@ -5,6 +5,7 @@ import { dashboardCommand } from '../commands/dashboard.js';
 import { doctorCommand } from '../commands/doctor.js';
 import { updateCommand } from '../commands/update.js';
 import { uninstallCommand } from '../commands/uninstall.js';
+import { getCurrentVersion } from '../core/version.js';
 
 const SKILL_COMMANDS = [
   '/smart',
@@ -22,7 +23,7 @@ const program = new Command();
 program
   .name('smart')
   .description('AI Workflow Orchestration — OpenSpec + Superpowers dual-star development pipeline')
-  .version('0.1.14', '-v, --version', 'Display version')
+  .version(getCurrentVersion(), '-v, --version', 'Display version')
   .helpOption('-h, --help', 'Display help')
   .addHelpText('after', `\nSkill Commands:\n  ${SKILL_COMMANDS.join('\n  ')}\n`);
 
