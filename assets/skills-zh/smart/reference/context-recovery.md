@@ -29,7 +29,7 @@ Smart 的核心价值之一是 Agent 中断后自动恢复进度。通过 `.smar
 Design → Build 交接时生成上下文包：
 
 ```
-openspec/changes/<name>/.smart/handoff/
+smartdocs/changes/<name>/handoff/
 ├── design-context.json    # 设计上下文
 ├── spec-context.json      # 规范上下文
 └── spec-context.md        # 规范摘要

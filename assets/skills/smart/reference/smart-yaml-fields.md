@@ -4,6 +4,8 @@ Canonical path: `smart/reference/smart-yaml-fields.md`
 
 This file is the field reference for the `.smart.yaml` state file. Consult on demand; not loaded inline with skills.
 
+Default location: `smartdocs/changes/<name>/.smart.yaml`.
+
 ## Example
 
 ```yaml

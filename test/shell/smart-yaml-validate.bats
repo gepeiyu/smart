@@ -15,8 +15,10 @@ teardown() {
 }
 
 @test "smart-yaml-validate.sh accepts valid YAML" {
-  echo 'phase: propose' > "$TMPDIR/test.yaml"
-  echo 'mode: standard' >> "$TMPDIR/test.yaml"
+  echo 'phase: issue' > "$TMPDIR/test.yaml"
+  echo 'workflow: full' >> "$TMPDIR/test.yaml"
+  echo 'archived: false' >> "$TMPDIR/test.yaml"
+  echo 'verify_result: pending' >> "$TMPDIR/test.yaml"
   run bash "${SMART_SCRIPTS_DIR}/smart-yaml-validate.sh" "$TMPDIR/test.yaml"
   [ "$status" -eq 0 ]
 }

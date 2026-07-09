@@ -9,16 +9,18 @@ const smartState = path.join(repoRoot, 'assets', 'skills', 'smart', 'scripts', '
 
 function withChange(workflow: 'full' | 'bugfix' | 'quick', phase = 'issue') {
   const dir = mkdtempSync(path.join(tmpdir(), 'smart-state-'));
-  const changeDir = path.join(dir, 'openspec', 'changes', 'change');
-  mkdirSync(changeDir, { recursive: true });
-  writeFileSync(path.join(changeDir, '.smart.yaml'), [
+  const openSpecChangeDir = path.join(dir, 'openspec', 'changes', 'change');
+  const smartChangeDir = path.join(dir, 'smartdocs', 'changes', 'change');
+  mkdirSync(openSpecChangeDir, { recursive: true });
+  mkdirSync(smartChangeDir, { recursive: true });
+  writeFileSync(path.join(smartChangeDir, '.smart.yaml'), [
     `workflow: ${workflow}`,
     `phase: ${phase}`,
     'auto_transition: true',
     'verify_result: pending',
     'archived: false',
   ].join('\n'));
-  return { dir, smartFile: path.join(changeDir, '.smart.yaml') };
+  return { dir, smartFile: path.join(smartChangeDir, '.smart.yaml') };
 }
 
 function runSmartState(cwd: string, ...args: string[]) {
@@ -26,6 +28,19 @@ function runSmartState(cwd: string, ...args: string[]) {
 }
 
 describe('smart-state workflow routing', () => {
+  it('initializes state under smartdocs changes', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'smart-state-init-'));
+    try {
+      mkdirSync(path.join(dir, 'openspec', 'changes', 'change'), { recursive: true });
+      const output = runSmartState(dir, 'init', 'change');
+      const smartFile = path.join(dir, 'smartdocs', 'changes', 'change', '.smart.yaml');
+      expect(output).toContain('CREATED: smartdocs/changes/change/.smart.yaml');
+      expect(readFileSync(smartFile, 'utf8')).toContain('phase: issue');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('routes full workflow issue completion to design', () => {
     const change = withChange('full');
     try {

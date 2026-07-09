@@ -10,14 +10,18 @@ openspec/                              # OpenSpec — WHAT
 ├── changes/
 │   ├── <name>/                        # Active change
 │   │   ├── .openspec.yaml
-│   │   ├── .smart.yaml
 │   │   ├── proposal.md                # Why + What
 │   │   ├── design.md                  # High-level architecture decisions
 │   │   ├── specs/<capability>/spec.md # Delta capability spec
-│   │   ├── .comet/handoff/            # Script-generated phase handoff packages
 │   │   └── tasks.md                   # Task checklist
 │   └── archive/YYYY-MM-DD-<name>/     # Archived
 └── specs/<capability>/spec.md         # Main specs (merged on archive via OpenSpec delta semantics)
+
+smartdocs/                             # Smart — STATE + EVIDENCE
+└── changes/
+    └── <name>/
+        ├── .smart.yaml                # Smart workflow state
+        └── handoff/                   # Script-generated phase handoff packages
 
 docs/superpowers/                      # Superpowers — HOW
 ├── specs/YYYY-MM-DD-<topic>-design.md # Design doc (technical RFC; annotated on archive)

@@ -23,7 +23,11 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
 fi
 
 CHANGE_NAME="$1"
-SMART_FILE="openspec/changes/${CHANGE_NAME}/.smart.yaml"
+if [ -f "$CHANGE_NAME" ]; then
+  SMART_FILE="$CHANGE_NAME"
+else
+  SMART_FILE="smartdocs/changes/${CHANGE_NAME}/.smart.yaml"
+fi
 
 if [ ! -f "$SMART_FILE" ]; then
   echo "ERROR: .smart.yaml not found at $SMART_FILE" >&2

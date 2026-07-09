@@ -111,9 +111,19 @@ _change_dir() {
   echo "openspec/changes/${1}"
 }
 
-# ── Helper: Get .smart.yaml path ──────────────────────────────────────
+# ── Helper: Get Smart-owned change directory ──────────────────────────
+_smart_change_dir() {
+  echo "smartdocs/changes/${1}"
+}
+
+# ── Helper: Get new .smart.yaml path ──────────────────────────────────
+_new_smart_file() {
+  echo "$(_smart_change_dir "${1}")/.smart.yaml"
+}
+
+# ── Helper: Resolve .smart.yaml path ──────────────────────────────────
 _smart_file() {
-  echo "openspec/changes/${1}/.smart.yaml"
+  _new_smart_file "${1}"
 }
 
 # ── Security: validate field value (path traversal, injection) ─────────
@@ -148,7 +158,7 @@ cmd_init() {
   local smart_file
 
   change_dir="$(_change_dir "$change_name")"
-  smart_file="$(_smart_file "$change_name")"
+  smart_file="$(_new_smart_file "$change_name")"
 
   if [ ! -d "$change_dir" ]; then
     echo "ERROR: Change directory not found: ${change_dir}" >&2
@@ -159,6 +169,8 @@ cmd_init() {
     echo "EXISTS: ${smart_file}"
     return 0
   fi
+
+  mkdir -p "$(_smart_change_dir "$change_name")"
 
   cat > "$smart_file" <<-EOF
 # Smart workflow state

@@ -28,7 +28,7 @@ Agent 必须始终知道当前所在的 Smart 工作流阶段。通过读取 `.s
 
 在 **非 build 阶段**：
 - 禁止写入或修改 `src/`、`lib/`、`tests/` 下的源码文件
-- 允许写入 `openspec/*`、`docs/superpowers/*`、`.smart/*`、`.claude/*`
+- 允许写入 `openspec/*`、`smartdocs/*`、`docs/superpowers/*`、`.smart/*`、`.claude/*`
 
 ### 提示模板
 

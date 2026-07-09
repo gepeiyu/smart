@@ -7,7 +7,7 @@ set -euo pipefail
 
 # ── Source env ─────────────────────────────────────────────────────────
 SMART_ENV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-if [ -z "${SMART_STATE:-}"]; then
+if [ -z "${SMART_STATE:-}" ]; then
   # shellcheck source=smart-env.sh
   source "$SMART_ENV_DIR/smart-env.sh" --quiet
 fi
@@ -27,7 +27,7 @@ fi
 
 CHANGE_NAME="$1"
 CHANGE_DIR="openspec/changes/${CHANGE_NAME}"
-SMART_FILE="${CHANGE_DIR}/.smart.yaml"
+SMART_FILE="smartdocs/changes/${CHANGE_NAME}/.smart.yaml"
 ARCHIVE_DIR="openspec/archive/${CHANGE_NAME}"
 
 if [ ! -d "$CHANGE_DIR" ]; then
@@ -179,9 +179,10 @@ for artifact in "proposal.md" "design.md" "tasks.md" ".openspec.yaml"; do
 done
 
 # Copy handoff context if present
-HANDOFF_DIR="${CHANGE_DIR}/.smart"
+HANDOFF_DIR="smartdocs/changes/${CHANGE_NAME}/handoff"
 if [ -d "$HANDOFF_DIR" ]; then
-  cp -r "$HANDOFF_DIR" "${ARCHIVE_DIR}/.smart" 2>/dev/null || true
+  mkdir -p "${ARCHIVE_DIR}/smartdocs"
+  cp -r "$HANDOFF_DIR" "${ARCHIVE_DIR}/smartdocs/handoff" 2>/dev/null || true
   echo "  Archived: handoff context"
 fi
 

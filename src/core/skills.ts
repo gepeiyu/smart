@@ -388,6 +388,7 @@ async function createWorkingDirs(projectPath: string, language?: string): Promis
   const dirs = [
     path.join(projectPath, 'docs', 'superpowers', 'specs'),
     path.join(projectPath, 'docs', 'superpowers', 'plans'),
+    path.join(projectPath, 'smartdocs', 'changes'),
     path.join(projectPath, '.smart'),
   ];
   for (const dir of dirs) await ensureDir(dir);

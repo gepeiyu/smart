@@ -8,7 +8,7 @@
 
 ### Phase Awareness (Highest Priority)
 
-When there is an active smart change (`openspec/changes/<name>/.smart.yaml` exists), **before starting any operation** you must read the `phase` field to confirm the current phase.
+When there is an active smart change (`smartdocs/changes/<name>/.smart.yaml` exists), **before starting any operation** you must read the `phase` field to confirm the current phase.
 
 **Phases and allowed operations:**
 

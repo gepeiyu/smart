@@ -85,9 +85,10 @@ describe('createWorkingDirs', () => {
 
     await createWorkingDirs('/project', 'zh');
 
-    expect(ensureDir).toHaveBeenCalledTimes(3);
+    expect(ensureDir).toHaveBeenCalledTimes(4);
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'docs', 'superpowers', 'specs'));
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'docs', 'superpowers', 'plans'));
+    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'smartdocs', 'changes'));
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', '.smart'));
     expect(writeFile).toHaveBeenCalledWith(
       path.join('/project', '.smart', 'config.yaml'),

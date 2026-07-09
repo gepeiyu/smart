@@ -33,7 +33,7 @@ if [ -z "$MODE" ] || [ -z "$TARGET" ]; then
 fi
 
 CHANGE_DIR="openspec/changes/${CHANGE_NAME}"
-SMART_FILE="${CHANGE_DIR}/.smart.yaml"
+SMART_FILE="smartdocs/changes/${CHANGE_NAME}/.smart.yaml"
 
 if [ ! -d "$CHANGE_DIR" ]; then
   echo "BLOCKED: Change directory not found: ${CHANGE_DIR}" >&2
@@ -349,13 +349,13 @@ elif [ "$MODE" = "--apply" ]; then
 
   # For verify-fail, skip checks (user-declared failure)
   if [ "$TARGET" = "verify-fail" ]; then
-    "$SMART_STATE" transition "$CHANGE_NAME" "$TARGET"
+    "$SMART_BASH" "$SMART_STATE" transition "$CHANGE_NAME" "$TARGET"
     exit $?
   fi
 
   # Run guard check
   if check_"$GUARD_PHASE"; then
-    "$SMART_STATE" transition "$CHANGE_NAME" "$TARGET"
+    "$SMART_BASH" "$SMART_STATE" transition "$CHANGE_NAME" "$TARGET"
     exit $?
   else
     exit 1

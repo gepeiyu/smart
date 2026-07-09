@@ -1,5 +1,7 @@
 # .smart.yaml 字段参考
 
+默认位置：`smartdocs/changes/<name>/.smart.yaml`。
+
 ## 核心字段
 
 ```yaml
@@ -33,7 +35,7 @@ branch_status: pending            # pending | handled
 ```yaml
 design_doc: docs/superpowers/specs/YYYY-MM-DD-topic-design.md
 plan: docs/superpowers/plans/YYYY-MM-DD-feature.md
-handoff_context: openspec/changes/<name>/.smart/handoff/design-context.json
+handoff_context: smartdocs/changes/<name>/handoff/design-context.json
 handoff_hash: <sha256 hex>
 ```
 
@@ -55,7 +57,7 @@ archived: false
 
 1. **环境变量**（最高）：`SMART_AUTO_TRANSITION`、`SMART_CONTEXT_COMPRESSION`
 2. **项目配置**：`.smart/config.yaml`
-3. **变更配置**（最低）：`openspec/changes/<name>/.smart.yaml`
+3. **变更配置**（最低）：`smartdocs/changes/<name>/.smart.yaml`
 
 ## 项目配置字段
 

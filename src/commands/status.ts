@@ -1,6 +1,6 @@
-import path from 'path';
 import { readDir, fileExists } from '../utils/file-system.js';
 import { promises as fs } from 'fs';
+import { openSpecChangesDir, resolveSmartYamlPath } from '../core/smart-paths.js';
 
 interface SmartYamlField {
   phase?: string;
@@ -45,9 +45,9 @@ function recommendNextCommand(change: Pick<ActiveChange, 'phase' | 'workflow' | 
   }
 }
 
-async function readSmartYaml(changeDir: string): Promise<SmartYamlField | null> {
-  const yamlPath = path.join(changeDir, '.smart.yaml');
-  if (!(await fileExists(yamlPath))) return null;
+async function readSmartYaml(projectPath: string, changeName: string): Promise<SmartYamlField | null> {
+  const yamlPath = await resolveSmartYamlPath(projectPath, changeName);
+  if (!yamlPath) return null;
   try {
     const content = await fs.readFile(yamlPath, 'utf-8');
     const fields: SmartYamlField = {};
@@ -68,7 +68,7 @@ export async function statusCommand(targetPath: string, opts?: Record<string, un
   const cwd = targetPath || process.cwd();
   const jsonOutput = opts?.json === true;
 
-  const changesDir = path.join(cwd, 'openspec', 'changes');
+  const changesDir = openSpecChangesDir(cwd);
   if (!(await fileExists(changesDir))) {
     const msg = 'No openspec/changes/ directory. Run smart init first and use /smart-issue to create a change.';
     if (jsonOutput) {
@@ -84,8 +84,7 @@ export async function statusCommand(targetPath: string, opts?: Record<string, un
 
   for (const name of entries) {
     if (name === 'archive' || name === '.archive') continue;
-    const changeDir = path.join(changesDir, name);
-    const yaml = await readSmartYaml(changeDir);
+    const yaml = await readSmartYaml(cwd, name);
     if (yaml) {
       const change: ActiveChange = {
         name,

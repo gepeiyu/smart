@@ -8,6 +8,7 @@
 #
 # Whitelist paths (always allowed):
 #   openspec/*
+#   smartdocs/*
 #   docs/superpowers/*
 #   .smart/*
 #   .claude/*
@@ -57,7 +58,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   echo "Returns a JSON decision object for hook callers."
   echo ""
   echo "Allowed paths (no phase check):"
-  echo "  openspec/*  docs/superpowers/*  .smart/*  .claude/*"
+  echo "  openspec/*  smartdocs/*  docs/superpowers/*  .smart/*  .claude/*"
   exit 0
 fi
 
@@ -93,7 +94,7 @@ NORMALIZED_PATH="${TARGET_FILE#./}"
 
 # ── Whitelist check: always allowed paths ──────────────────────────────
 case "$NORMALIZED_PATH" in
-  openspec/*|docs/superpowers/*|.smart/*|.claude/*)
+  openspec/*|smartdocs/*|docs/superpowers/*|.smart/*|.claude/*)
     allow
     ;;
 esac
@@ -112,7 +113,7 @@ if [ -z "$CHANGE_NAME" ]; then
   allow
 fi
 
-SMART_FILE="openspec/changes/${CHANGE_NAME}/.smart.yaml"
+SMART_FILE="smartdocs/changes/${CHANGE_NAME}/.smart.yaml"
 if [ ! -f "$SMART_FILE" ]; then
   # No .smart.yaml yet — allow (pre-init)
   allow
@@ -126,7 +127,7 @@ fi
 
 # ── Phase-based write gating ───────────────────────────────────────────
 # Issue phase:   only openspec/* allowed (already handled by whitelist)
-# Design phase:  only docs/superpowers/*, .smart/* allowed (whitelisted)
+# Design phase:  only smartdocs/*, docs/superpowers/*, .smart/* allowed (whitelisted)
 # Build phase:   code writes allowed
 # Verify phase:  code reads allowed, writes should be limited
 # Archive phase: no code writes allowed
@@ -134,7 +135,7 @@ fi
 case "$CURRENT_PHASE" in
   issue|design)
     # In issue/design phase, code file writes are blocked
-    block "Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'. Allowed paths: openspec/*  docs/superpowers/*  .smart/*  .claude/*. Use /smart-issue or /smart-design phase commands."
+    block "Cannot write to '${NORMALIZED_PATH}' in phase '${CURRENT_PHASE}'. Allowed paths: openspec/*  smartdocs/*  docs/superpowers/*  .smart/*  .claude/*. Use /smart-issue or /smart-design phase commands."
     ;;
   build)
     # Build phase allows code writes — pass through

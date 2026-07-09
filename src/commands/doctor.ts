@@ -4,6 +4,7 @@ import { fileExists, readDir } from '../utils/file-system.js';
 import { detectPlatforms } from '../core/detect.js';
 import { resolveOpenSpecCommand } from '../core/openspec.js';
 import { hasCodegraphProjectIndex, resolveCodegraphCommand } from '../core/codegraph.js';
+import { openSpecChangesDir, resolveSmartYamlPath } from '../core/smart-paths.js';
 
 interface CheckResult {
   name: string;
@@ -21,7 +22,7 @@ function checkOpenSpecCLI(cwd: string): CheckResult {
 }
 
 async function checkWorkingDirs(cwd: string): Promise<CheckResult> {
-  const expected = ['.smart', 'docs', 'docs/superpowers', 'docs/superpowers/specs', 'docs/superpowers/plans', 'openspec', 'openspec/changes'];
+  const expected = ['.smart', 'smartdocs', 'smartdocs/changes', 'docs', 'docs/superpowers', 'docs/superpowers/specs', 'docs/superpowers/plans', 'openspec', 'openspec/changes'];
   const missing = [];
 
   for (const dir of expected) {
@@ -93,14 +94,13 @@ async function checkConfig(cwd: string): Promise<CheckResult> {
   const projectConfigPath = path.join(cwd, '.smart', 'config.yaml');
   const hasProjectConfig = await fileExists(projectConfigPath);
 
-  const changesDir = path.join(cwd, 'openspec', 'changes');
+  const changesDir = openSpecChangesDir(cwd);
   const hasChangesDir = await fileExists(changesDir);
   let smartYamlCount = 0;
   if (hasChangesDir) {
     const changeDirs = await readDir(changesDir);
     for (const changeName of changeDirs) {
-      const smartYaml = path.join(changesDir, changeName, '.smart.yaml');
-      if (await fileExists(smartYaml)) smartYamlCount++;
+      if (await resolveSmartYamlPath(cwd, changeName)) smartYamlCount++;
     }
   }
 

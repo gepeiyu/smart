@@ -30,8 +30,8 @@ if [ "${2:-}" = "--compressed" ]; then
 fi
 
 CHANGE_DIR="openspec/changes/${CHANGE_NAME}"
-SMART_FILE="${CHANGE_DIR}/.smart.yaml"
-HANDOFF_DIR="${CHANGE_DIR}/.smart/handoff"
+SMART_FILE="smartdocs/changes/${CHANGE_NAME}/.smart.yaml"
+HANDOFF_DIR="smartdocs/changes/${CHANGE_NAME}/handoff"
 
 if [ ! -d "$CHANGE_DIR" ]; then
   echo "ERROR: Change directory not found: ${CHANGE_DIR}" >&2
@@ -127,15 +127,14 @@ echo "  \"compressed\": ${COMPRESSED}," >> "$HANDOFF_JSON"
 echo "  \"files\": [" >> "$HANDOFF_JSON"
 
 for i in "${!CONTEXT_FILES[@]}"; do
-  local f="${CONTEXT_FILES[$i]}"
-  local n="${CONTEXT_NAMES[$i]}"
-  local comma=""
+  f="${CONTEXT_FILES[$i]}"
+  n="${CONTEXT_NAMES[$i]}"
+  comma=""
   if [ $i -lt $((${#CONTEXT_FILES[@]} - 1)) ]; then
     comma=","
   fi
 
   # Read content, escape for JSON
-  local content
   content="$(cat "$f" 2>/dev/null || true)"
   # Simple JSON escaping
   content="${content//\\/\\\\}"
@@ -157,7 +156,6 @@ echo "  \"metadata\": {" >> "$HANDOFF_JSON"
 
 # Read additional metadata from .smart.yaml
 for meta_key in "workflow" "build_mode" "isolation" "tdd_mode" "review_mode"; do
-  local meta_val
   meta_val="$(_read_yaml "$meta_key")"
   echo "    \"${meta_key}\": \"${meta_val:-null}\"," >> "$HANDOFF_JSON"
 done
@@ -191,8 +189,8 @@ fi
 HANDOFF_HASH="$(_compute_sha256 "$HANDOFF_JSON")"
 
 # ── Update .smart.yaml ────────────────────────────────────────────────
-"$SMART_STATE" set "$CHANGE_NAME" "handoff_context" "${HANDOFF_JSON}" >/dev/null
-"$SMART_STATE" set "$CHANGE_NAME" "handoff_hash" "${HANDOFF_HASH}" >/dev/null
+"$SMART_BASH" "$SMART_STATE" set "$CHANGE_NAME" "handoff_context" "${HANDOFF_JSON}" >/dev/null
+"$SMART_BASH" "$SMART_STATE" set "$CHANGE_NAME" "handoff_hash" "${HANDOFF_HASH}" >/dev/null
 
 echo "HANDOFF: context written to ${HANDOFF_JSON}"
 echo "HANDOFF_HASH: ${HANDOFF_HASH}"

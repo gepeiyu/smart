@@ -8,7 +8,7 @@
 
 ### 阶段感知（最高优先级）
 
-有活跃 smart change 时（`openspec/changes/<name>/.smart.yaml` 存在），**每次开始执行操作前**必须读取 `phase` 字段确认当前阶段。
+有活跃 smart change 时（`smartdocs/changes/<name>/.smart.yaml` 存在），**每次开始执行操作前**必须读取 `phase` 字段确认当前阶段。
 
 **阶段与允许操作：**
 

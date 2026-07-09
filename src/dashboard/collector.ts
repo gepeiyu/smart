@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileExists, readDir } from '../utils/file-system.js';
 import { readSmartYaml } from './yaml.js';
+import { openSpecChangesDir } from '../core/smart-paths.js';
 import { readTasks } from './task-parser.js';
 import { readVerification } from './verify-parser.js';
 import { collectGitSnapshot } from './git.js';
@@ -9,7 +10,7 @@ import { recommendNextAction } from './next-action.js';
 import type { DashboardSnapshot, ChangeInfo, NextAction, Risk } from './types.js';
 
 export async function collectDashboardSnapshot(projectPath: string): Promise<DashboardSnapshot> {
-  const changesDir = path.join(projectPath, 'openspec', 'changes');
+  const changesDir = openSpecChangesDir(projectPath);
   const changeDirs = await fileExists(changesDir) ? await readDir(changesDir) : [];
 
   const allChanges: ChangeInfo[] = [];
@@ -18,7 +19,7 @@ export async function collectDashboardSnapshot(projectPath: string): Promise<Das
 
   for (const dirName of changeDirs) {
     const changeDir = path.join(changesDir, dirName);
-    const yaml = await readSmartYaml(changeDir);
+    const yaml = await readSmartYaml(projectPath, dirName);
     if (!yaml) continue;
 
     const tasks = await readTasks(changeDir);

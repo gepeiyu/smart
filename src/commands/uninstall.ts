@@ -2,7 +2,7 @@ import path from 'path';
 import { checkbox, select } from '@inquirer/prompts';
 import { getBaseDir, type InstallScope } from '../core/detect.js';
 import { getPlatformSkillsDir } from '../core/platforms.js';
-import { removeSmartSkillsForPlatform, removeSmartRules, removeSmartHooks, removeSmartWorkingDirs } from '../core/uninstall.js';
+import { removeSmartSkillsForPlatform, removeSmartRules, removeSmartHooks, removeAssociatedProjectInstalls, pruneEmptyPlatformDir } from '../core/uninstall.js';
 import { detectInstalledSmartTargets } from './update.js';
 
 interface UninstallOptions { json?: boolean; scope?: InstallScope; force?: boolean; }
@@ -10,6 +10,10 @@ interface UninstallOptions { json?: boolean; scope?: InstallScope; force?: boole
 interface TargetUninstallResult {
   scope: InstallScope; platform: string; platformName: string;
   skillsRemoved: number; rulesRemoved: number; hooksRemoved: number; workingDirsRemoved: number;
+}
+
+interface AssociatedUninstallResult {
+  openspecSkills: number; openspecCommands: number; codegraph: number; superpowers: number; smartConfig: number; packages: number;
 }
 
 export async function uninstallCommand(targetPath: string, options: UninstallOptions = {}): Promise<void> {
@@ -51,31 +55,41 @@ export async function uninstallCommand(targetPath: string, options: UninstallOpt
 
   for (const target of selectedTargets) {
     const baseDir = getBaseDir(projectPath, target.scope);
-    const skillsRemovedBool = await removeSmartSkillsForPlatform(target.platform, baseDir);
-    const skillsRemoved = skillsRemovedBool ? 1 : 0;
+    const skillsRemoved = await removeSmartSkillsForPlatform(target.platform, baseDir, target.scope);
     totalSkills += skillsRemoved;
-    const rulesRemovedBool = await removeSmartRules(target.platform, baseDir);
-    const rulesRemoved = rulesRemovedBool ? 1 : 0;
+    const rulesRemoved = await removeSmartRules(target.platform, baseDir, target.scope);
     totalRules += rulesRemoved;
     let hooksRemoved = 0;
     if (target.platform.supportsHooks) {
-      const hooksRemovedBool = await removeSmartHooks(target.platform, baseDir);
-      hooksRemoved = hooksRemovedBool ? 1 : 0; totalHooks += hooksRemoved;
+      hooksRemoved = await removeSmartHooks(target.platform, baseDir, target.scope);
+      totalHooks += hooksRemoved;
     }
+    await pruneEmptyPlatformDir(target.platform, baseDir, target.scope);
     log(`  ${target.platform.name} (${target.scope}): ${skillsRemoved} skills, ${rulesRemoved} rules, ${hooksRemoved} hooks removed`);
     results.push({ scope: target.scope, platform: target.platform.id, platformName: target.platform.name, skillsRemoved, rulesRemoved, hooksRemoved, workingDirsRemoved: 0 });
   }
 
   let workingDirsRemoved = 0;
+  let associatedRemoved: AssociatedUninstallResult | null = null;
   const hasProjectScope = selectedTargets.some((t) => t.scope === 'project');
   if (hasProjectScope) {
-    await removeSmartWorkingDirs(projectPath);
-    workingDirsRemoved = 1;
-    if (workingDirsRemoved > 0) log(`  Working directories: ${workingDirsRemoved} removed`);
+    const projectPlatforms = selectedTargets.filter((t) => t.scope === 'project').map((t) => t.platform);
+    associatedRemoved = await removeAssociatedProjectInstalls(projectPath, projectPlatforms);
+    workingDirsRemoved = associatedRemoved.smartConfig;
+    const associatedTotal = associatedRemoved.openspecSkills + associatedRemoved.openspecCommands + associatedRemoved.codegraph + associatedRemoved.superpowers + associatedRemoved.smartConfig + associatedRemoved.packages;
+    if (associatedTotal > 0) {
+      log(`  Associated project installs: ${associatedTotal} removed`);
+      if (associatedRemoved.openspecSkills > 0) log(`    OpenSpec skills: ${associatedRemoved.openspecSkills}`);
+      if (associatedRemoved.openspecCommands > 0) log(`    OpenSpec commands: ${associatedRemoved.openspecCommands}`);
+      if (associatedRemoved.superpowers > 0) log(`    Superpowers skills: ${associatedRemoved.superpowers}`);
+      if (associatedRemoved.codegraph > 0) log(`    CodeGraph artifacts: ${associatedRemoved.codegraph}`);
+      if (associatedRemoved.packages > 0) log(`    npm package references: ${associatedRemoved.packages}`);
+      if (associatedRemoved.smartConfig > 0) log(`    Smart config dirs: ${associatedRemoved.smartConfig}`);
+    }
   }
 
   if (options.json) {
-    console.log(JSON.stringify({ targets: results.map((r) => ({ scope: r.scope, platform: r.platform, platformName: r.platformName, skillsRemoved: r.skillsRemoved, rulesRemoved: r.rulesRemoved, hooksRemoved: r.hooksRemoved })), workingDirsRemoved, summary: { targetsProcessed: results.length, totalSkillsRemoved: totalSkills, totalRulesRemoved: totalRules, totalHooksRemoved: totalHooks } }, null, 2)); return;
+    console.log(JSON.stringify({ targets: results.map((r) => ({ scope: r.scope, platform: r.platform, platformName: r.platformName, skillsRemoved: r.skillsRemoved, rulesRemoved: r.rulesRemoved, hooksRemoved: r.hooksRemoved })), workingDirsRemoved, associatedRemoved, summary: { targetsProcessed: results.length, totalSkillsRemoved: totalSkills, totalRulesRemoved: totalRules, totalHooksRemoved: totalHooks } }, null, 2)); return;
   }
 
   log(`\n  Summary:`);

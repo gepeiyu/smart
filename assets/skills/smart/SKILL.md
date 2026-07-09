@@ -52,7 +52,7 @@ Calling `/opsx:new` directly leaves `.smart.yaml` missing and breaks later phase
 
 **Step 1: Read `.smart.yaml` state metadata**
 
-Prefer reading `openspec/changes/<name>/.smart.yaml`. If not available, fall back to `openspec status --change "<name>" --json`, `tasks.md`, and `docs/superpowers/` file checks.
+Read `smartdocs/changes/<name>/.smart.yaml`. If it is not available, use `openspec status --change "<name>" --json`, `tasks.md`, and `docs/superpowers/` file checks only to recover enough context to recreate the Smart state in `smartdocs/changes/<name>/.smart.yaml`.
 
 **Resume rules**:
 - On every context resume, rerun Step 0 and Step 1; do not trust conversation history for phase detection
