@@ -67,16 +67,16 @@ User Request
 
 安装完成后，在 Claude Code、Cursor、OpenCode、Trae 等 AI 编码平台中使用这些命令驱动工作流：
 
-| 命令 | 用法 | 说明 |
-|------|------|------|
-| `/smart` | `/smart <需求描述>` 或 `/smart` | 主入口。自动判断当前状态：新需求进入 Issue，已有变更从当前阶段恢复。 |
-| `/smart-issue` | `/smart-issue <需求描述>` 或 `/smart-issue #<issue>` | 创建或选择变更，完成需求拆解并初始化 `.smart.yaml`。 |
-| `/smart-design` | `/smart-design <change-name>` | 基于 Issue 产出设计方案和增量规范。 |
-| `/smart-build` | `/smart-build <change-name>` | 根据设计和任务清单实现代码，支持 TDD、子 Agent 和守卫检查。 |
-| `/smart-verify` | `/smart-verify <change-name>` | 运行验证，检查实现、测试、上下文完整性和归档条件。 |
-| `/smart-archive` | `/smart-archive <change-name>` | 归档已通过验证的变更，并同步 OpenSpec 状态。 |
-| `/smart-bugfix` | `/smart-bugfix <bug 描述>` | Bug修复模式：先做根因分析，再进入 Build → Verify → Archive。 |
-| `/smart-quick` | `/smart-quick <小改动描述>` | 快捷模式：跳过 Brainstorming 和 Plan，直接进行快捷 Build 和 Verify。 |
+| 命令 | 说明 |
+|------|------|
+| `/smart <需求描述>` 或 `/smart` | 主入口。自动判断当前状态：新需求进入 Issue，已有变更从当前阶段恢复。 |
+| `/smart-issue <需求描述>` 或 `/smart-issue #<issue>` | 创建或选择变更，完成需求拆解并初始化 `.smart.yaml`。 |
+| `/smart-design <change-name>` | 基于 Issue 产出设计方案和增量规范。 |
+| `/smart-build <change-name>` | 根据设计和任务清单实现代码，支持 TDD、子 Agent 和守卫检查。 |
+| `/smart-verify <change-name>` | 运行验证，检查实现、测试、上下文完整性和归档条件。 |
+| `/smart-archive <change-name>` | 归档已通过验证的变更，并同步 OpenSpec 状态。 |
+| `/smart-bugfix <bug 描述>` | Bug修复模式：先做根因分析，再进入 Build → Verify → Archive。 |
+| `/smart-quick <小改动描述>` | 快捷模式：跳过 Brainstorming 和 Plan，直接进行快捷 Build 和 Verify。 |
 
 常见用法：
 
