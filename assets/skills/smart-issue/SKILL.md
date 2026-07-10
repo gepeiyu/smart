@@ -22,12 +22,15 @@ description: "Smart Issue — Phase 1 of the Smart workflow. Initializes new cha
 ### Step 2: Initialize Change
 
 1. Run `/opsx:new <name>` to create the OpenSpec change directory
-2. This creates `openspec/changes/<name>/` with:
+2. This creates `openspec/changes/<name>/` with OpenSpec-owned artifacts:
    - `.openspec.yaml`
-   - `.smart.yaml` (initialized with `phase: issue`, `workflow: full`)
    - proposal.md
    - design.md (high-level architecture decisions)
    - tasks.md
+3. Run Smart state initialization so `smartdocs/changes/<name>/.smart.yaml` exists with `phase: issue` and `workflow: full`:
+   ```bash
+   "$SMART_BASH" "$SMART_STATE" init <change-name>
+   ```
 
 ### Step 3: Create Artifacts
 

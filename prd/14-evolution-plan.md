@@ -93,7 +93,7 @@ Dashboard 只读取外部工具生成的文件，从不修改。
 2. Adapter 是内部架构重构，不是外部 API
 3. 只迁移 70% 的 Shell 脚本（hook-guard 和 env 必须保留）
 4. 所有增值功能都是可选的
-5. 旧 `.smart.yaml` 永远可读
+5. Smart 状态以 `smartdocs/changes/<name>/.smart.yaml` 为唯一权威源；旧路径状态需要显式迁移，不作为运行时回退
 
 ## 14.7 成功指标
 

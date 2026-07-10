@@ -100,11 +100,14 @@ Smart 使用**解耦状态架构**：
 ```
 openspec/changes/<name>/
 ├── .openspec.yaml    # OpenSpec 管理（规范生命周期）— Smart 只读
-├── .smart.yaml       # Smart 管理（工作流阶段、模式、结果）— Smart 读写
 ├── proposal.md       # OpenSpec 生成 — Smart 校验存在性
 ├── design.md
 ├── specs/*/spec.md
 └── tasks.md
+
+smartdocs/changes/<name>/
+├── .smart.yaml       # Smart 管理（工作流阶段、模式、结果）— Smart 读写
+└── handoff/          # Smart 生成的阶段交接上下文包
 ```
 
 **状态归属原则**: 谁产生谁管理，Smart 只校验不篡改。

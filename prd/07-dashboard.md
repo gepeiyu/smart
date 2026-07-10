@@ -23,7 +23,7 @@ server.ts → GET /api/dashboard → DashboardSnapshot
 | 组件 | 职责 |
 |------|------|
 | `collector.ts` | 扫描 `openspec/changes/`，收集变更信息 |
-| `yaml.ts` | 解析 `.smart.yaml` / `.openspec.yaml` |
+| `yaml.ts` | 解析 `smartdocs/changes/<name>/.smart.yaml` / `.openspec.yaml` |
 | `task-parser.ts` | 解析 tasks.md，计算完成率 |
 | `git.ts` | 最近提交、脏文件、当前分支 |
 | `next-action.ts` | 推荐下一 `/smart*` 命令 |

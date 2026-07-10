@@ -13,6 +13,12 @@ description: "Smart Verify — Phase 4 of the Smart workflow. Verify and Close p
 - `phase: verify` in `.smart.yaml`
 - Invoked via `/smart-verify` from the main `/smart` dispatcher
 
+## Artifact Language
+
+Before creating or updating artifacts, read `.smart/config.yaml` when it exists. Use Chinese for `smart_language: zh` and English for `smart_language: en`. If the field is absent, use the language of the user request that triggered the workflow. When resuming a change whose existing artifacts have a clear dominant language, preserve that language unless the user explicitly requests a switch.
+
+Apply the resolved language to prose in `verification-report.md` and to accepted-deviation updates in `tasks.md`. Keep paths, file names, metadata keys, commands, identifiers, and machine-readable values unchanged.
+
 ## Steps
 
 ### Step 1: Determine Verification Level

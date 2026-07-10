@@ -102,7 +102,7 @@ branch_status: pending            # pending | handled
 # 产物路径
 design_doc: docs/superpowers/specs/YYYY-MM-DD-topic-design.md
 plan: docs/superpowers/plans/YYYY-MM-DD-feature.md
-handoff_context: openspec/changes/<name>/.smart/handoff/design-context.json
+handoff_context: smartdocs/changes/<name>/handoff/design-context.json
 handoff_hash: <sha256 hex>
 
 # 命令（可选）
@@ -144,7 +144,7 @@ issue ──issue-complete──→ design ──design-complete──→ build 
 
 1. **环境变量**（最高）：`SMART_AUTO_TRANSITION`、`SMART_CONTEXT_COMPRESSION`
 2. **项目配置**：`.smart/config.yaml`
-3. **变更配置**（最低）：`openspec/changes/<name>/.smart.yaml`
+3. **变更配置**（最低）：`smartdocs/changes/<name>/.smart.yaml`
 
 ### 下一步解析器
 
@@ -170,7 +170,7 @@ issue ──issue-complete──→ design ──design-complete──→ build 
 | **软**：Phase Guard Rule | 每轮对话注入 | 提醒 Agent 当前阶段、所需产物 |
 | **硬**：Hook Guard | PreToolUse 拦截 | 错误阶段禁止写源码 |
 
-Hook Guard 白名单：`openspec/*`、`docs/superpowers/*`、`.smart/*`、`.claude/*`
+Hook Guard 白名单：`openspec/*`、`smartdocs/*`、`docs/superpowers/*`、`.smart/*`、`.claude/*`
 
 ## 3.5 9 个用户决策点
 
