@@ -1,18 +1,12 @@
 import type { ChangeInfo, NextAction } from './types.js';
 
 const COMMAND_MAP: Record<string, { command: string; label: string }> = {
-  issue: { command: 'smart-design', label: 'Smart Design' },
-  design: { command: 'smart-build', label: 'Smart Build' },
-  build: { command: 'smart-verify', label: 'Smart Verify' },
+  issue: { command: 'smart-issue', label: 'Smart Issue' },
+  design: { command: 'smart-design', label: 'Smart Design' },
+  build: { command: 'smart-build', label: 'Smart Build' },
   verify: { command: 'smart-verify', label: 'Smart Verify' },
   archive: { command: 'smart-archive', label: 'Smart Archive' },
 };
-
-function modeCommand(workflow: string): { command: string; label: string } | null {
-  if (workflow === 'bugfix') return { command: 'smart-bugfix', label: 'Smart Bugfix' };
-  if (workflow === 'quick') return { command: 'smart-quick', label: 'Smart Quick' };
-  return null;
-}
 
 export function recommendNextAction(change: ChangeInfo): NextAction | null {
   if (change.archived) {
@@ -24,32 +18,22 @@ export function recommendNextAction(change: ChangeInfo): NextAction | null {
     };
   }
 
-  if (change.verifyResult === 'fail' && change.phase === 'verify') {
+  if (change.verifyResult === 'fail') {
     return {
       change: change.name,
-      command: 'smart-build',
-      label: 'Smart Build',
-      reason: 'Verification failed — rebuild to fix issues',
+      command: 'smart run status',
+      label: 'Blocked',
+      reason: 'Run is blocked; inspect and resume after fixing the cause',
     };
   }
 
-  if (change.verifyResult === 'pass' && change.phase === 'verify') {
-    return {
-      change: change.name,
-      command: 'smart-archive',
-      label: 'Smart Archive',
-      reason: 'Verification passed — ready to archive',
-    };
-  }
-
-  const modeMapping = ['issue', 'build'].includes(change.phase) ? modeCommand(change.workflow) : null;
-  const mapping = modeMapping ?? COMMAND_MAP[change.phase];
+  const mapping = COMMAND_MAP[change.phase];
   if (mapping) {
     return {
       change: change.name,
       command: mapping.command,
       label: mapping.label,
-      reason: `Current phase is "${change.phase}"`,
+      reason: `Current stage is "${change.phase}"`,
     };
   }
 

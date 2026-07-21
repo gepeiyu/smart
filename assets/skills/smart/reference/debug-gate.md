@@ -1,5 +1,9 @@
 # Debug Gate Protocol
 
+Resolve the current workflow first. Load a named third-party debugging skill only when that
+integration is bound to the current stage and provides the capability; otherwise apply this
+evidence-first protocol with the resolved actors.
+
 Canonical path: `smart/reference/debug-gate.md`
 
 This protocol is shared by smart sub-skills that directly modify code, including build, bugfix, and quick. Enter the Debug Gate when a crash, unexpected behavior, test failure, or build failure appears while running the program, tests, build, or manual verification.

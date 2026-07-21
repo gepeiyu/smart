@@ -17,7 +17,12 @@ vi.mock('fs', () => ({
 
 import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
-import { hasCodegraphProjectIndex, resolveCodegraphCommand, resolvePnpmGlobalCommand } from '../src/core/codegraph.js';
+import {
+  hasCodegraphProjectIndex,
+  initializeCodegraph,
+  resolveCodegraphCommand,
+  resolvePnpmGlobalCommand,
+} from '../src/core/codegraph.js';
 
 describe('codegraph', () => {
   beforeEach(() => {
@@ -51,7 +56,10 @@ describe('codegraph', () => {
       vi.mocked(existsSync).mockReturnValue(true);
       vi.mocked(execFileSync).mockImplementationOnce(() => '1.0.0' as unknown as void);
       const result = resolveCodegraphCommand('/project');
-      expect(result).toEqual({ command: '/project/node_modules/.bin/codegraph', location: 'local' });
+      expect(result).toEqual({
+        command: '/project/node_modules/.bin/codegraph',
+        location: 'local',
+      });
     });
 
     it('returns global codegraph when available', () => {
@@ -63,7 +71,9 @@ describe('codegraph', () => {
 
     it('returns null when not available', () => {
       vi.mocked(existsSync).mockReturnValue(false);
-      vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
       const result = resolveCodegraphCommand();
       expect(result).toBeNull();
     });
@@ -76,8 +86,26 @@ describe('codegraph', () => {
     });
 
     it('returns empty when pnpm not available', () => {
-      vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
       expect(resolvePnpmGlobalCommand()).toBe('');
+    });
+  });
+
+  describe('initializeCodegraph', () => {
+    it('runs project initialization through a local command', () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(execFileSync)
+        .mockImplementationOnce(() => '1.0.0' as unknown as void)
+        .mockImplementationOnce(() => undefined);
+
+      expect(initializeCodegraph('/project')).toBe(true);
+      expect(execFileSync).toHaveBeenLastCalledWith(
+        '/project/node_modules/.bin/codegraph',
+        ['init', '-i'],
+        expect.objectContaining({ cwd: '/project' }),
+      );
     });
   });
 });

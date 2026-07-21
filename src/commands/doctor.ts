@@ -1,48 +1,33 @@
 import path from 'path';
-import { execFileSync } from 'child_process';
-import { fileExists, readDir } from '../utils/file-system.js';
 import { detectPlatforms } from '../core/detect.js';
-import { resolveOpenSpecCommand } from '../core/openspec.js';
-import { hasCodegraphProjectIndex, resolveCodegraphCommand } from '../core/codegraph.js';
-import { openSpecChangesDir, resolveSmartYamlPath } from '../core/smart-paths.js';
+import { getPlatformSkillsDir, type Platform } from '../core/platforms.js';
+import { loadProjectIntegrationEnvironment } from '../integrations/environment.js';
+import type { IntegrationRuntime } from '../integrations/runtime.js';
+import { fileExists } from '../utils/file-system.js';
+import { resolveConfiguredProjectWorkflow } from '../workflows/store.js';
 
 interface CheckResult {
   name: string;
   status: 'pass' | 'fail' | 'warn' | 'skip';
   message: string;
-}
-
-function checkOpenSpecCLI(cwd: string): CheckResult {
-  const command = resolveOpenSpecCommand(cwd);
-  return {
-    name: 'OpenSpec CLI',
-    status: command ? 'pass' : 'fail',
-    message: command ? `OpenSpec CLI is installed (${command.location})` : 'OpenSpec CLI is not installed. Run: npm install -g @fission-ai/openspec@latest',
-  };
+  integrationId?: string;
 }
 
 async function checkWorkingDirs(cwd: string): Promise<CheckResult> {
-  const expected = ['.smart', 'smartdocs', 'smartdocs/changes', 'docs', 'docs/superpowers', 'docs/superpowers/specs', 'docs/superpowers/plans', 'openspec', 'openspec/changes'];
+  const expected = ['.smart', '.smart/workflows', 'smartdocs/changes', 'smartdocs/workflows'];
   const missing = [];
-
   for (const dir of expected) {
-    if (!(await fileExists(path.join(cwd, dir)))) {
-      missing.push(dir);
-    }
+    if (!(await fileExists(path.join(cwd, dir)))) missing.push(dir);
   }
-
   return {
     name: 'Working directories',
     status: missing.length === 0 ? 'pass' : missing.length === expected.length ? 'fail' : 'warn',
-    message: missing.length === 0
-      ? 'All working directories present'
-      : `Missing: ${missing.join(', ')}`,
+    message:
+      missing.length === 0 ? 'All Smart directories present' : `Missing: ${missing.join(', ')}`,
   };
 }
 
-async function checkSkills(cwd: string): Promise<CheckResult> {
-  const platforms = await detectPlatforms(cwd);
-
+async function checkSkills(cwd: string, platforms: Platform[]): Promise<CheckResult> {
   if (platforms.length === 0) {
     return {
       name: 'Smart skills',
@@ -50,139 +35,189 @@ async function checkSkills(cwd: string): Promise<CheckResult> {
       message: 'No AI platforms detected in this project',
     };
   }
-
-  let totalSkills = 0;
-  let installedSkills = 0;
-
+  let installed = 0;
   for (const platform of platforms) {
-    const skillsDir = path.join(cwd, platform.skillsDir, 'skills', 'smart');
-    const hasSkill = await fileExists(skillsDir);
-    totalSkills++;
-    if (hasSkill) installedSkills++;
+    if (
+      await fileExists(path.join(cwd, getPlatformSkillsDir(platform, 'project'), 'skills', 'smart'))
+    ) {
+      installed++;
+    }
   }
-
   return {
     name: 'Smart skills',
-    status: installedSkills === totalSkills ? 'pass' : 'warn',
-    message: `Skills installed on ${installedSkills}/${totalSkills} platforms`,
+    status: installed === platforms.length ? 'pass' : 'warn',
+    message: `Skills installed on ${installed}/${platforms.length} platforms`,
   };
 }
 
-async function checkScripts(cwd: string): Promise<CheckResult> {
-  const smartDir = path.join(cwd, '.smart');
-  const hasDir = await fileExists(smartDir);
+async function checkConfiguration(cwd: string): Promise<CheckResult> {
+  const configPath = path.join(cwd, '.smart', 'config.yaml');
+  if (!(await fileExists(configPath))) {
+    return { name: 'Smart configuration', status: 'fail', message: '.smart/config.yaml not found' };
+  }
+  try {
+    const { promises: fs } = await import('fs');
+    const content = await fs.readFile(configPath, 'utf-8');
+    const complete = content.includes('smart_language') && content.includes('auto_transition');
+    return {
+      name: 'Smart configuration',
+      status: complete ? 'pass' : 'warn',
+      message: complete ? '.smart/config.yaml is readable' : '.smart/config.yaml may be incomplete',
+    };
+  } catch {
+    return {
+      name: 'Smart configuration',
+      status: 'fail',
+      message: '.smart/config.yaml is not readable',
+    };
+  }
+}
+
+async function checkIntegration(
+  runtime: IntegrationRuntime,
+  cwd: string,
+  platforms: Platform[],
+): Promise<CheckResult> {
+  const platformIds = platforms.map((platform) => platform.id);
+  const detection = await runtime.detect({
+    projectPath: cwd,
+    baseDir: cwd,
+    scope: 'project',
+    platformIds,
+  });
+  const missingPlatforms = platformIds.filter(
+    (platformId) => !detection.installedOnPlatforms[platformId],
+  );
+  const ready = detection.dependencyAvailable && missingPlatforms.length === 0;
+  const details = [
+    detection.dependencyAvailable ? 'dependency available' : 'dependency missing',
+    missingPlatforms.length === 0
+      ? 'project integration ready'
+      : `missing on: ${missingPlatforms.join(', ')}`,
+  ];
   return {
-    name: 'Scripts',
-    status: hasDir ? 'pass' : 'warn',
-    message: hasDir ? '.smart directory exists' : '.smart directory not found',
+    name: runtime.manifest.displayName,
+    integrationId: runtime.manifest.id,
+    status: platformIds.length === 0 ? 'skip' : ready ? 'pass' : 'fail',
+    message: details.join('; '),
   };
 }
 
-async function checkCodegraph(cwd: string): Promise<CheckResult> {
-  const command = resolveCodegraphCommand(cwd);
-  const hasIndex = await hasCodegraphProjectIndex(cwd);
-  const cliStatus = command ? `CLI installed (${command.location})` : 'CLI not installed';
-  const indexStatus = hasIndex ? 'project index found' : 'project index not found';
-  return {
-    name: 'CodeGraph',
-    status: command && hasIndex ? 'pass' : command ? 'warn' : 'fail',
-    message: `${cliStatus}; ${indexStatus}`,
-  };
-}
-
-async function checkConfig(cwd: string): Promise<CheckResult> {
-  const projectConfigPath = path.join(cwd, '.smart', 'config.yaml');
-  const hasProjectConfig = await fileExists(projectConfigPath);
-
-  const changesDir = openSpecChangesDir(cwd);
-  const hasChangesDir = await fileExists(changesDir);
-  let smartYamlCount = 0;
-  if (hasChangesDir) {
-    const changeDirs = await readDir(changesDir);
-    for (const changeName of changeDirs) {
-      if (await resolveSmartYamlPath(cwd, changeName)) smartYamlCount++;
-    }
-  }
-
-  const messages: string[] = [];
-  let status: 'pass' | 'warn' | 'fail' = 'pass';
-
-  if (hasProjectConfig) {
-    try {
-      const { promises: fs } = await import('fs');
-      const content = await fs.readFile(projectConfigPath, 'utf-8');
-      const hasPhase = content.includes('phase') || content.includes('auto_transition');
-      messages.push(`.smart/config.yaml ${hasPhase ? 'valid' : 'may be incomplete'}`);
-      if (!hasPhase) status = 'warn';
-    } catch {
-      messages.push('.smart/config.yaml not readable');
-      status = 'warn';
-    }
-  } else {
-    messages.push('.smart/config.yaml not found');
-    status = 'fail';
-  }
-
-  if (smartYamlCount > 0) {
-    messages.push(`${smartYamlCount} change(s) with .smart.yaml`);
-  } else if (hasChangesDir) {
-    messages.push('no changes with .smart.yaml found');
-    if (status === 'pass') status = 'warn';
-  } else {
-    messages.push('openspec/changes/ not found');
-  }
-
-  return { name: 'Configuration file', status, message: messages.join('; ') };
-}
-
-export async function doctorCommand(targetPath: string, opts?: Record<string, unknown>): Promise<void> {
-  const cwd = targetPath || process.cwd();
+export async function doctorCommand(
+  targetPath: string,
+  opts?: Record<string, unknown>,
+): Promise<void> {
+  const cwd = path.resolve(targetPath || process.cwd());
   const fixMode = opts?.fix === true;
   const jsonOutput = opts?.json === true;
+  if (!jsonOutput) console.log(`Smart Doctor - ${cwd}\n`);
 
-  if (!jsonOutput) console.log(`Smart Doctor — ${cwd}\n`);
+  const platforms = await detectPlatforms(cwd);
+  let workflowInfo: Awaited<ReturnType<typeof resolveConfiguredProjectWorkflow>> = null;
+  let integrationEnvironment: Awaited<ReturnType<typeof loadProjectIntegrationEnvironment>> | null =
+    null;
+  let workflowCheck: CheckResult;
+  let runtimes: IntegrationRuntime[] = [];
+  try {
+    integrationEnvironment = await loadProjectIntegrationEnvironment(cwd);
+    workflowInfo = await resolveConfiguredProjectWorkflow(cwd, integrationEnvironment.registry);
+    if (!workflowInfo) {
+      workflowCheck = {
+        name: 'Workflow configuration',
+        status: 'fail',
+        message: '.smart/setup.yaml not found; run smart init',
+      };
+    } else if (!workflowInfo.resolution.valid) {
+      workflowCheck = {
+        name: 'Workflow configuration',
+        status: 'fail',
+        message: workflowInfo.resolution.issues.map((issue) => issue.message).join('; '),
+      };
+    } else {
+      runtimes = Object.keys(workflowInfo.resolution.workflow.integrations).map((id) =>
+        integrationEnvironment!.runtimes.require(id),
+      );
+      const digestChanged =
+        workflowInfo.selection.resolvedDigest !== workflowInfo.resolution.workflow.digest;
+      workflowCheck = {
+        name: 'Workflow configuration',
+        status: digestChanged ? 'warn' : 'pass',
+        message: digestChanged
+          ? `Workflow changed since setup (${workflowInfo.selection.source})`
+          : `${workflowInfo.selection.source} [${workflowInfo.resolution.workflow.supportLevel}]`,
+      };
+    }
+  } catch (error) {
+    workflowCheck = {
+      name: 'Workflow configuration',
+      status: 'fail',
+      message: (error as Error).message,
+    };
+  }
 
+  const integrationChecks = await Promise.all(
+    runtimes.map((runtime) => checkIntegration(runtime, cwd, platforms)),
+  );
   const results: CheckResult[] = [
-    checkOpenSpecCLI(cwd),
+    workflowCheck,
     await checkWorkingDirs(cwd),
-    await checkSkills(cwd),
-    await checkScripts(cwd),
-    await checkCodegraph(cwd),
-    await checkConfig(cwd),
+    await checkSkills(cwd, platforms),
+    await checkConfiguration(cwd),
+    ...integrationChecks,
   ];
 
+  if (fixMode) {
+    for (const check of integrationChecks.filter((result) => result.status === 'fail')) {
+      if (!integrationEnvironment) continue;
+      const runtime = integrationEnvironment.runtimes.require(check.integrationId!);
+      const result = await runtime.install({
+        projectPath: cwd,
+        baseDir: cwd,
+        scope: 'project',
+        platformIds: platforms.map((platform) => platform.id),
+        installDependency: true,
+      });
+      if (!jsonOutput) console.log(`  Fix ${runtime.manifest.displayName}: ${result.status}`);
+    }
+  }
+
   if (jsonOutput) {
-    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+    process.stdout.write(
+      JSON.stringify(
+        {
+          workflow: workflowInfo
+            ? {
+                source: workflowInfo.selection.source,
+                supportLevel: workflowInfo.resolution.workflow.supportLevel,
+                digest: workflowInfo.resolution.workflow.digest,
+              }
+            : null,
+          checks: results,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
     return;
   }
 
   let passed = 0;
   let failed = 0;
   let warnings = 0;
-
   for (const result of results) {
-    const icon = result.status === 'pass' ? '✓' : result.status === 'fail' ? '✗' : result.status === 'warn' ? '⚠' : '○';
-    console.log(`  ${icon} ${result.name}: ${result.message}`);
+    const icon =
+      result.status === 'pass'
+        ? 'OK'
+        : result.status === 'fail'
+          ? 'FAIL'
+          : result.status === 'warn'
+            ? 'WARN'
+            : 'SKIP';
+    console.log(`  [${icon}] ${result.name}: ${result.message}`);
     if (result.status === 'pass') passed++;
     else if (result.status === 'fail') failed++;
     else if (result.status === 'warn') warnings++;
   }
-
   console.log(`\n${passed} passed, ${warnings} warnings, ${failed} failed`);
-
-  if (fixMode && failed > 0) {
-    console.log('\nAttempting auto-fix...');
-    if (results[0].status === 'fail') {
-      try {
-        execFileSync('npm', ['install', '-g', '@fission-ai/openspec@latest'], { stdio: 'inherit', timeout: 120000 });
-        console.log('  ✓ OpenSpec CLI installed');
-      } catch {
-        console.log('  ✗ Failed to install OpenSpec CLI');
-      }
-    }
-  }
-
-  if (!fixMode && failed > 0) {
-    console.log('\nRun with --fix to attempt auto-repair.');
-  }
+  if (!fixMode && failed > 0) console.log('\nRun with --fix to reconcile active integrations.');
 }

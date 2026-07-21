@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileExists, readDir } from '../utils/file-system.js';
 import { readSmartYaml } from './yaml.js';
-import { openSpecChangesDir } from '../core/smart-paths.js';
+import { smartdocsChangesDir } from '../core/smart-paths.js';
 import { readTasks } from './task-parser.js';
 import { readVerification } from './verify-parser.js';
 import { collectGitSnapshot } from './git.js';
@@ -10,8 +10,8 @@ import { recommendNextAction } from './next-action.js';
 import type { DashboardSnapshot, ChangeInfo, NextAction, Risk } from './types.js';
 
 export async function collectDashboardSnapshot(projectPath: string): Promise<DashboardSnapshot> {
-  const changesDir = openSpecChangesDir(projectPath);
-  const changeDirs = await fileExists(changesDir) ? await readDir(changesDir) : [];
+  const changesDir = smartdocsChangesDir(projectPath);
+  const changeDirs = (await fileExists(changesDir)) ? await readDir(changesDir) : [];
 
   const allChanges: ChangeInfo[] = [];
   const changes: ChangeInfo[] = [];
@@ -27,14 +27,15 @@ export async function collectDashboardSnapshot(projectPath: string): Promise<Das
 
     const info: ChangeInfo = {
       name: dirName,
-      phase: yaml.phase || 'issue',
-      workflow: yaml.workflow || 'full',
-      autoTransition: yaml.auto_transition ?? true,
-      verifyResult: yaml.verify_result || 'pending',
-      branchStatus: yaml.branch_status || 'pending',
-      archived: yaml.archived ?? false,
-      designDoc: yaml.design_doc || null,
-      plan: yaml.plan || null,
+      phase: yaml.current_stage || 'done',
+      workflow: yaml.workflow_source || '',
+      autoTransition: true,
+      verifyResult:
+        yaml.status === 'blocked' ? 'fail' : yaml.status === 'completed' ? 'pass' : 'pending',
+      branchStatus: yaml.status === 'completed' ? 'handled' : 'pending',
+      archived: yaml.status === 'completed',
+      designDoc: null,
+      plan: null,
       tasks,
       verification,
       nextAction: null,
@@ -62,7 +63,7 @@ export async function collectDashboardSnapshot(projectPath: string): Promise<Das
   const risks: Risk[] = assessRisks(allChanges);
   for (const risk of risks) {
     if (risk.change) {
-      const change = allChanges.find(c => c.name === risk.change);
+      const change = allChanges.find((c) => c.name === risk.change);
       if (change) {
         change.risks.push(risk.message);
       }

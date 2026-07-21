@@ -9,19 +9,22 @@ function makeProject() {
 }
 
 function writeState(project: string, change: string, stateRoot: 'smartdocs' | 'openspec') {
-  const openspecChangeDir = path.join(project, 'openspec', 'changes', change);
-  mkdirSync(openspecChangeDir, { recursive: true });
-
-  const stateDir = stateRoot === 'smartdocs'
-    ? path.join(project, 'smartdocs', 'changes', change)
-    : openspecChangeDir;
+  const stateDir =
+    stateRoot === 'smartdocs'
+      ? path.join(project, 'smartdocs', 'changes', change)
+      : path.join(project, 'openspec', 'changes', change);
   mkdirSync(stateDir, { recursive: true });
-  writeFileSync(path.join(stateDir, '.smart.yaml'), [
-    'workflow: full',
-    'phase: design',
-    'verify_result: pending',
-    'archived: false',
-  ].join('\n'));
+  writeFileSync(
+    path.join(stateDir, '.smart.yaml'),
+    [
+      'version: 1',
+      'workflow_source: official/full',
+      'support_level: official-certified',
+      'route: standard',
+      'status: active',
+      'current_stage: design',
+    ].join('\n'),
+  );
 }
 
 describe('statusCommand state paths', () => {
@@ -45,8 +48,8 @@ describe('statusCommand state paths', () => {
       expect(parsed.changes).toHaveLength(1);
       expect(parsed.changes[0]).toMatchObject({
         name: 'change-one',
-        phase: 'design',
-        workflow: 'full',
+        currentStage: 'design',
+        workflowSource: 'official/full',
       });
     } finally {
       rmSync(project, { recursive: true, force: true });
@@ -57,6 +60,7 @@ describe('statusCommand state paths', () => {
     const project = makeProject();
     try {
       writeState(project, 'old-path-change', 'openspec');
+      mkdirSync(path.join(project, 'smartdocs', 'changes'), { recursive: true });
       let output = '';
       vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
         output += chunk.toString();

@@ -1,54 +1,24 @@
 ---
 name: smart-quick
-description: Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify
+description: Smart 官方认证快速流程 — 用于低风险小改并保留明确验证
 ---
 
-# Smart 快捷模式
+# Smart Quick 流程
 
-## 概述
+先阅读 `smart/reference/workflow-runtime.md`。仅对无需架构或跨模块协调的文案、文档、提示词或配置值小改使用：
 
-快捷模式用于小型调整，跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify。
-
-```
-/smart-quick: issue → quick build → quick verify → archive
+```bash
+smart run init <change-name> --workflow official/quick --route quick
 ```
 
-## 差异
+调度解析出的 `currentStage`。官方 quick 预设省略 design，但仍要求需求、实现证据、验证和归档；小改不等于
+无需测试。
 
-| 方面 | 完整工作流 | 快捷模式 |
-|------|-----------|------|
-| Issue 阶段 | 完整需求澄清 | 仅确认变更范围 |
-| Design 阶段 | Brainstorm + Plan | **跳过** |
-| Build 阶段 | 完整构建 | **轻量**（直接实现，无子代理） |
-| Verify 阶段 | 完整验证 | **轻量**（6 项检查清单） |
-| Archive 阶段 | 完整归档 | 完整 |
+影响多个模块、增加/删除配置结构、修改 API/Schema、需要大量新测试或需要规格/设计决策时，说明原因并
+等待确认，然后执行：
 
-## 工作流
-
-1. **Open（Issue 轻量）** — 确认变更范围，创建变更
-2. **Light Build** — 直接实现，不经过子代理和完整审查
-3. **Light Verify** — 6 项模式检查清单
-4. **Archive** — 完整归档流程
-
-## 配置
-
-```yaml
-# .smart.yaml
-workflow: quick
-phase: issue
-auto_transition: true
-build_mode: direct
-verify_mode: light
+```bash
+smart run switch <change-name> official/full --confirmed
 ```
 
-## 状态转换
-
-```
-issue ──issue-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
-```
-
-## 参考
-
-- `smart` 主技能
-- `smart/reference/smart-yaml-fields.md`
-- `smart/reference/auto-transition.md`
+自定义工作流自行控制阶段，不得隐式继承 quick 的省略规则。

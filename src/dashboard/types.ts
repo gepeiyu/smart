@@ -1,25 +1,13 @@
 export interface SmartYaml {
-  workflow?: 'full' | 'bugfix' | 'quick';
-  phase?: string;
-  auto_transition?: boolean;
-  build_mode?: string;
-  build_pause?: string | null;
-  isolation?: string;
-  tdd_mode?: string | null;
-  subagent_dispatch?: string | null;
-  review_mode?: string;
-  verify_mode?: string | null;
-  verify_result?: string;
-  verification_report?: string | null;
-  branch_status?: string;
-  design_doc?: string | null;
-  plan?: string | null;
-  handoff_context?: string | null;
-  handoff_hash?: string | null;
-  build_command?: string | null;
-  verify_command?: string | null;
-  direct_override?: boolean;
-  archived?: boolean;
+  workflow_source?: string;
+  workflow_digest?: string;
+  support_level?: string;
+  route?: 'standard' | 'bugfix' | 'quick';
+  status?: 'active' | 'blocked' | 'completed';
+  current_stage?: string | null;
+  ready_stages?: string[];
+  completed_stages?: string[];
+  failure?: string | null;
 }
 
 export interface ChangeInfo {

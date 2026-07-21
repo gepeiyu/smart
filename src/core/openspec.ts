@@ -2,14 +2,22 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { PLATFORMS } from './platforms.js';
 import { printCommandErrorDetails } from './command-error.js';
+import { PLATFORMS } from './platforms.js';
 import type { InstallScope } from './types.js';
 
-const VALID_TOOL_IDS = new Set(PLATFORMS.map((p) => p.openspecToolId));
 const ALL_OPENSPEC_WORKFLOWS = [
-  'propose', 'explore', 'new', 'continue', 'apply', 'ff',
-  'sync', 'archive', 'bulk-archive', 'verify', 'onboard',
+  'propose',
+  'explore',
+  'new',
+  'continue',
+  'apply',
+  'ff',
+  'sync',
+  'archive',
+  'bulk-archive',
+  'verify',
+  'onboard',
 ] as const;
 
 function getNpmExecutable(platform: NodeJS.Platform = process.platform): string {
@@ -17,8 +25,11 @@ function getNpmExecutable(platform: NodeJS.Platform = process.platform): string 
 }
 
 function buildOpenSpecInitInvocation(
-  projectPath: string, toolIds: string[], scope: InstallScope,
-  homeDir = os.homedir(), includeProfileFlag = true,
+  projectPath: string,
+  toolIds: string[],
+  scope: InstallScope,
+  homeDir = os.homedir(),
+  includeProfileFlag = true,
   command = 'openspec',
 ): { command: string; args: string[] } {
   const targetPath = scope === 'global' ? homeDir : projectPath;
@@ -27,12 +38,17 @@ function buildOpenSpecInitInvocation(
   return { command, args };
 }
 
-const ALL_WORKFLOWS_CONFIG = JSON.stringify({
-  featureFlags: {},
-  profile: 'custom',
-  delivery: 'both',
-  workflows: [...ALL_OPENSPEC_WORKFLOWS],
-}, null, 2) + '\n';
+const ALL_WORKFLOWS_CONFIG =
+  JSON.stringify(
+    {
+      featureFlags: {},
+      profile: 'custom',
+      delivery: 'both',
+      workflows: [...ALL_OPENSPEC_WORKFLOWS],
+    },
+    null,
+    2,
+  ) + '\n';
 
 function getOpenSpecDefaultConfigDir(): string {
   const platform = os.platform();
@@ -64,7 +80,9 @@ function createOpenSpecAllWorkflowsEnv(): { env: NodeJS.ProcessEnv; configHome: 
 }
 
 interface ConfigBackup {
-  configPath: string; backupPath: string; hadExisting: boolean;
+  configPath: string;
+  backupPath: string;
+  hadExisting: boolean;
 }
 
 function writeAllWorkflowsToDefaultConfig(): ConfigBackup | null {
@@ -79,7 +97,13 @@ function writeAllWorkflowsToDefaultConfig(): ConfigBackup | null {
     fs.writeFileSync(configPath, ALL_WORKFLOWS_CONFIG, 'utf-8');
     return { configPath, backupPath, hadExisting };
   } catch {
-    if (hadExisting) { try { fs.unlinkSync(backupPath); } catch { /* ignore cleanup error */ } }
+    if (hadExisting) {
+      try {
+        fs.unlinkSync(backupPath);
+      } catch {
+        /* ignore cleanup error */
+      }
+    }
     return null;
   }
 }
@@ -93,7 +117,9 @@ function restoreDefaultConfig(backup: ConfigBackup | null): void {
     } else {
       if (fs.existsSync(backup.configPath)) fs.unlinkSync(backup.configPath);
     }
-  } catch { /* restore error */ }
+  } catch {
+    /* restore error */
+  }
 }
 
 function isCommandAvailable(command: string): boolean {
@@ -101,46 +127,65 @@ function isCommandAvailable(command: string): boolean {
     const checker = process.platform === 'win32' ? 'where' : 'which';
     execFileSync(checker, [command], { stdio: 'ignore', timeout: 10_000 });
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function getLocalBinPath(projectPath: string, command: string): string {
-  return path.join(projectPath, 'node_modules', '.bin', process.platform === 'win32' ? `${command}.cmd` : command);
+  return path.join(
+    projectPath,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? `${command}.cmd` : command,
+  );
 }
 
 function isExecutableAvailable(command: string): boolean {
   try {
     execFileSync(command, ['--version'], { stdio: 'ignore', timeout: 10_000 });
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
-function resolveOpenSpecCommand(projectPath: string): { command: string; location: 'local' | 'global' } | null {
+function resolveOpenSpecCommand(
+  projectPath: string,
+): { command: string; location: 'local' | 'global' } | null {
   const localCommand = getLocalBinPath(projectPath, 'openspec');
-  if (fs.existsSync(localCommand) && isExecutableAvailable(localCommand)) return { command: localCommand, location: 'local' };
+  if (fs.existsSync(localCommand) && isExecutableAvailable(localCommand))
+    return { command: localCommand, location: 'local' };
   if (isCommandAvailable('openspec')) return { command: 'openspec', location: 'global' };
   return null;
 }
 
 async function ensureOpenSpecCli(
-  scope: InstallScope, projectPath: string, shouldInstall = true,
+  scope: InstallScope,
+  projectPath: string,
+  shouldInstall = true,
 ): Promise<'ready' | 'missing' | 'failed'> {
   const existingCommand = resolveOpenSpecCommand(projectPath);
   if (!shouldInstall) return existingCommand ? 'ready' : 'missing';
   const label = existingCommand ? 'Upgrading' : 'Installing';
   console.warn(`    ${label} OpenSpec CLI...`);
   try {
-    const npmArgs = scope === 'global'
-      ? ['install', '-g', '@fission-ai/openspec@latest']
-      : ['install', '@fission-ai/openspec@latest'];
+    const npmArgs =
+      scope === 'global'
+        ? ['install', '-g', '@fission-ai/openspec@latest']
+        : ['install', '@fission-ai/openspec@latest'];
     execFileSync(getNpmExecutable(), npmArgs, {
-      cwd: projectPath, stdio: 'inherit', timeout: 120_000,
+      cwd: projectPath,
+      stdio: 'inherit',
+      timeout: 120_000,
       shell: process.platform === 'win32',
     });
     return resolveOpenSpecCommand(projectPath) ? 'ready' : 'failed';
   } catch (error) {
     if (existingCommand) {
-      console.warn(`    OpenSpec upgrade failed, using existing ${existingCommand.location} version: ${(error as Error).message}`);
+      console.warn(
+        `    OpenSpec upgrade failed, using existing ${existingCommand.location} version: ${(error as Error).message}`,
+      );
       return 'ready';
     }
     console.error(`    Failed to install OpenSpec CLI: ${(error as Error).message}`);
@@ -166,35 +211,51 @@ function migrateOpenCodeOpenSpecPaths(homeDir: string): void {
       if (entries.length === 0) continue;
       fs.mkdirSync(destDir, { recursive: true });
       for (const entry of entries) {
-        fs.cpSync(path.join(srcDir, entry), path.join(destDir, entry), { recursive: true, force: true });
+        fs.cpSync(path.join(srcDir, entry), path.join(destDir, entry), {
+          recursive: true,
+          force: true,
+        });
       }
       fs.rmSync(srcDir, { recursive: true, force: true });
     } catch (error) {
-      console.error(`    Warning: failed to migrate OpenSpec ${label}: ${(error as Error).message}`);
+      console.error(
+        `    Warning: failed to migrate OpenSpec ${label}: ${(error as Error).message}`,
+      );
     }
   }
   if (fs.existsSync(wrongDir)) {
-    try { const remaining = fs.readdirSync(wrongDir); if (remaining.length === 0) fs.rmdirSync(wrongDir); } catch { /* cleanup error */ }
+    try {
+      const remaining = fs.readdirSync(wrongDir);
+      if (remaining.length === 0) fs.rmdirSync(wrongDir);
+    } catch {
+      /* cleanup error */
+    }
   }
 }
 
 async function installOpenSpec(
-  projectPath: string, toolIds: string[], scope: InstallScope, shouldInstallCli = true,
+  projectPath: string,
+  toolIds: string[],
+  scope: InstallScope,
+  shouldInstallCli = true,
 ): Promise<'installed' | 'failed' | 'skipped'> {
   const cliStatus = await ensureOpenSpecCli(scope, projectPath, shouldInstallCli);
   if (cliStatus === 'failed') {
-    console.error('    OpenSpec CLI not available. Install manually: npm install -g @fission-ai/openspec@latest');
+    console.error(
+      '    OpenSpec CLI not available. Install manually: npm install -g @fission-ai/openspec@latest',
+    );
     return 'failed';
   }
   if (cliStatus === 'missing') return 'skipped';
   const openspecCommand = resolveOpenSpecCommand(projectPath);
   if (!openspecCommand) {
-    console.error('    OpenSpec CLI not available. Install manually: npm install -g @fission-ai/openspec@latest');
+    console.error(
+      '    OpenSpec CLI not available. Install manually: npm install -g @fission-ai/openspec@latest',
+    );
     return 'failed';
   }
 
-  const unknownIds = toolIds.filter((id) => !VALID_TOOL_IDS.has(id));
-  if (unknownIds.length > 0) throw new Error(`Unknown tool IDs: ${unknownIds.join(', ')}`);
+  if (toolIds.length === 0) throw new Error('At least one OpenSpec tool ID is required');
 
   let configHome: string | undefined;
   let configBackup: ConfigBackup | null = null;
@@ -202,26 +263,47 @@ async function installOpenSpec(
     const openspecEnv = createOpenSpecAllWorkflowsEnv();
     configHome = openspecEnv.configHome;
     configBackup = writeAllWorkflowsToDefaultConfig();
-    const invocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope, os.homedir(), true, openspecCommand.command);
+    const invocation = buildOpenSpecInitInvocation(
+      projectPath,
+      toolIds,
+      scope,
+      os.homedir(),
+      true,
+      openspecCommand.command,
+    );
     try {
       execFileSync(invocation.command, invocation.args, {
-        cwd: projectPath, env: openspecEnv.env,
-        stdio: ['inherit', 'inherit', 'pipe'], timeout: 120_000,
+        cwd: projectPath,
+        env: openspecEnv.env,
+        stdio: ['inherit', 'inherit', 'pipe'],
+        timeout: 120_000,
         shell: process.platform === 'win32',
       });
     } catch (firstError) {
       const stderrText = (firstError as { stderr?: Buffer }).stderr?.toString() ?? '';
       if (stderrText.includes('unknown option') && stderrText.includes('--profile')) {
         console.warn('    OpenSpec does not support --profile flag, retrying without it...');
-        const fallbackInvocation = buildOpenSpecInitInvocation(projectPath, toolIds, scope, os.homedir(), false, openspecCommand.command);
+        const fallbackInvocation = buildOpenSpecInitInvocation(
+          projectPath,
+          toolIds,
+          scope,
+          os.homedir(),
+          false,
+          openspecCommand.command,
+        );
         execFileSync(fallbackInvocation.command, fallbackInvocation.args, {
-          cwd: projectPath, env: openspecEnv.env,
-          stdio: 'inherit', timeout: 120_000,
+          cwd: projectPath,
+          env: openspecEnv.env,
+          stdio: 'inherit',
+          timeout: 120_000,
           shell: process.platform === 'win32',
         });
-      } else { throw firstError; }
+      } else {
+        throw firstError;
+      }
     }
-    if (scope === 'global' && toolIds.includes('opencode')) migrateOpenCodeOpenSpecPaths(os.homedir());
+    if (scope === 'global' && toolIds.includes('opencode'))
+      migrateOpenCodeOpenSpecPaths(os.homedir());
     return 'installed';
   } catch (error) {
     console.error(`    OpenSpec init failed: ${(error as Error).message}`);
@@ -234,5 +316,10 @@ async function installOpenSpec(
 }
 
 export {
-  installOpenSpec, isCommandAvailable, buildOpenSpecInitInvocation, getNpmExecutable, migrateOpenCodeOpenSpecPaths, resolveOpenSpecCommand,
+  installOpenSpec,
+  isCommandAvailable,
+  buildOpenSpecInitInvocation,
+  getNpmExecutable,
+  migrateOpenCodeOpenSpecPaths,
+  resolveOpenSpecCommand,
 };

@@ -1,66 +1,32 @@
 ---
 name: smart-archive
-description: "Smart Archive — Phase 5 of the Smart workflow. Archive phase: syncs delta spec to main spec, marks up design doc, archives the change. Owned by OpenSpec. Invoked by /smart-archive."
+description: "Smart Archive stage adapter. Executes the resolved archive contract after explicit confirmation."
 ---
 
-# Smart Archive — Phase 5: Archive
+# Smart Archive Stage
 
-**Phase Owner**: OpenSpec
+Read `smart/reference/workflow-runtime.md`. Continue only when `currentStage` is `archive` and all
+verification inputs are present.
 
-## Entry Conditions
+## Blocking Confirmation
 
-- Verify phase complete (`verify_result: pass`)
-- `phase: archive` in `.smart.yaml`
-- Invoked via `/smart-archive` from the main `/smart` dispatcher
+Show the archive target, artifacts affected, verification result, and any residual risks. Wait for
+explicit user confirmation. A previous approval does not authorize this archive operation.
 
-## Steps
+## Execute
 
-### Step 1: Final Confirmation (Decision Point)
+For `openspec.archive.instruction-driven.v1`, invoke the installed OpenSpec archive capability so
+that delta synchronization and native archive semantics remain owned by OpenSpec. Preserve generated
+work products and annotate Smart-owned references when needed. For another registered contract,
+dispatch its resolved actors and enforce its declared outputs.
 
-1. Present archive summary to the user
-2. Wait for explicit archive confirmation before running the archive script
+## Complete
 
-### Step 2: Run Archive Script
-
-```bash
-"$SMART_BASH" "$SMART_ARCHIVE" <change-name>
-```
-
-This performs:
-- Delta spec → main spec sync via OpenSpec delta semantics
-- Design Doc markup with `archived-with` status
-- Plan marks `archived-with` status
-- Change moves to archive directory
-
-### Step 3: Verify Archive
-
-1. Confirm the change was moved to `openspec/changes/archive/YYYY-MM-DD-<name>/`
-2. Confirm `.smart.yaml` has `archived: true`
-
-### Step 4: Guard and Complete
-
-1. Run guard:
-   ```bash
-   "$SMART_BASH" "$SMART_GUARD" <change-name> archive --apply
-   ```
-2. Resolve:
-   ```bash
-   "$SMART_BASH" "$SMART_STATE" next <change-name>
-   ```
-
-## Script Location
+Verify the native archive and all `required_outputs`, then run:
 
 ```bash
-SMART_ENV="${SMART_ENV:-$(find . "$HOME"/.*/skills "$HOME/.config" "$HOME/.gemini" -path '*/smart/scripts/smart-env.sh' -type f -print -quit 2>/dev/null)}"
-if [ -z "$SMART_ENV" ]; then
-  echo "ERROR: smart-env.sh not found. Ensure the smart skill is installed." >&2
-  return 1
-fi
-. "$SMART_ENV"
-
-if [ -z "$SMART_GUARD" ] || [ -z "$SMART_STATE" ] || [ -z "$SMART_HANDOFF" ] || [ -z "$SMART_ARCHIVE" ]; then
-  echo "ERROR: Smart scripts not found. Ensure the smart skill is installed." >&2
-  echo "Expected path pattern: */smart/scripts/smart-*.sh under project or platform skill directories" >&2
-  return 1
-fi
+smart run advance <change-name> --stage archive
 ```
+
+If archive execution fails, keep the run on `archive` and use `smart run block`. Never simulate a
+successful archive by editing state directly.

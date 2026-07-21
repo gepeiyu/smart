@@ -1,14 +1,31 @@
 {
   "name": "@gepeiyu/smart",
   "version": "0.1.17",
-  "description": "AI Workflow Orchestration — OpenSpec + Superpowers dual-star development pipeline",
-  "keywords": ["smart", "openspec", "superpowers", "codegraph", "workflow"],
+  "description": "User-facing orchestration for verified and custom AI development workflows",
+  "keywords": [
+    "smart",
+    "openspec",
+    "superpowers",
+    "codegraph",
+    "workflow"
+  ],
   "license": "MIT",
   "author": "gepeiyu",
   "type": "module",
-  "publishConfig": { "access": "public" },
-  "bin": { "smart": "bin/smart.js" },
-  "files": ["dist", "bin", "assets", "scripts/postinstall.js", "!dist/**/*.test.js", "!dist/**/__tests__"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "smart": "bin/smart.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "assets",
+    "scripts/postinstall.js",
+    "!dist/**/*.test.js",
+    "!dist/**/__tests__"
+  ],
   "scripts": {
     "build": "node build.js",
     "dev": "tsc --watch",
@@ -19,15 +36,15 @@
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
-    "test:shell": "node scripts/run-bats.js test/shell/*.bats",
     "prepublishOnly": "node scripts/prepublish-check.js && npm run build",
     "postinstall": "node scripts/postinstall.js"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,mjs,cjs,json,md,yaml,yml}": "prettier --write"
   },
-
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.2.0",
@@ -41,6 +58,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.4.3",
-    "commander": "^14.0.0"
+    "commander": "^14.0.0",
+    "yaml": "^2.9.0"
   }
 }

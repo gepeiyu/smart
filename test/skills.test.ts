@@ -15,7 +15,16 @@ vi.mock('../src/utils/file-system.js', () => ({
 import { fileExists, readJson, copyFile, ensureDir } from '../src/utils/file-system.js';
 import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
-import { computeRuleDestPath, isManagedHookCommand, getTopLevelSkillNames, readManifest, getManifestSkills, createWorkingDirs, copySmartRulesForPlatform, getAssetsDir } from '../src/core/skills.js';
+import {
+  computeRuleDestPath,
+  isManagedHookCommand,
+  getTopLevelSkillNames,
+  readManifest,
+  getManifestSkills,
+  createWorkingDirs,
+  copySmartRulesForPlatform,
+  getAssetsDir,
+} from '../src/core/skills.js';
 import { PLATFORMS } from '../src/core/platforms.js';
 
 describe('skills helpers (pure)', () => {
@@ -38,7 +47,9 @@ describe('skills helpers (pure)', () => {
 
   describe('isManagedHookCommand', () => {
     it('detects managed hook commands', () => {
-      expect(isManagedHookCommand('bash .claude/skills/smart-guard.sh PreToolUse', ['smart-guard.sh'])).toBe(true);
+      expect(
+        isManagedHookCommand('bash .claude/skills/smart-guard.sh PreToolUse', ['smart-guard.sh']),
+      ).toBe(true);
     });
 
     it('rejects non-bash commands', () => {
@@ -86,10 +97,10 @@ describe('createWorkingDirs', () => {
     await createWorkingDirs('/project', 'zh');
 
     expect(ensureDir).toHaveBeenCalledTimes(4);
-    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'docs', 'superpowers', 'specs'));
-    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'docs', 'superpowers', 'plans'));
-    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'smartdocs', 'changes'));
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', '.smart'));
+    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', '.smart', 'workflows'));
+    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'smartdocs', 'changes'));
+    expect(ensureDir).toHaveBeenCalledWith(path.join('/project', 'smartdocs', 'workflows'));
     expect(writeFile).toHaveBeenCalledWith(
       path.join('/project', '.smart', 'config.yaml'),
       expect.stringContaining('smart_language: zh'),
@@ -154,7 +165,7 @@ describe('copySmartRulesForPlatform', () => {
   });
 
   it('returns 0 when platform has no rulesDir', async () => {
-    const gemini = PLATFORMS.find(p => p.id === 'gemini')!;
+    const gemini = PLATFORMS.find((p) => p.id === 'gemini')!;
     expect(gemini.rulesDir).toBeUndefined();
     const result = await copySmartRulesForPlatform('/base', gemini, true);
     expect(result).toEqual({ copied: 0, skipped: 0 });
@@ -162,7 +173,7 @@ describe('copySmartRulesForPlatform', () => {
 
   it('returns 0 when manifest has no rules', async () => {
     vi.mocked(readJson).mockResolvedValue({ version: '0.4.0', skills: [] });
-    const cursor = PLATFORMS.find(p => p.id === 'cursor')!;
+    const cursor = PLATFORMS.find((p) => p.id === 'cursor')!;
     const result = await copySmartRulesForPlatform('/base', cursor, true);
     expect(result).toEqual({ copied: 0, skipped: 0 });
   });

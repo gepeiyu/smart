@@ -1,65 +1,23 @@
 ---
 name: smart-bugfix
-description: Smart Bug修复模式 - 根因分析 → Build → Verify → Archive
+description: Smart 官方认证缺陷流程 — 根因分析、限定范围实现、验证和归档
 ---
 
-# Smart Bug修复模式
+# Smart Bugfix 流程
 
-## 概述
+先阅读 `smart/reference/workflow-runtime.md`。新缺陷执行：
 
-Bug修复模式用于缺陷修复，先优先使用 CodeGraph 完成根因分析，再进入 Build、Verify 和 Archive。
-
-```
-/smart-bugfix: 根因分析 → Build → Verify → Archive
+```bash
+smart run init <change-name> --workflow official/bugfix --route bugfix
 ```
 
-## 差异
+编辑前明确现象、复现、入口、根因、修复范围和验证计划。已声明代码智能 assistant 时优先使用；不可用时
+使用直接证据。随后根据实际 `currentStage` 调度 issue、build、verify 或 archive 适配器。
 
-| 方面 | 完整工作流 | Bug修复模式 |
-|------|-----------|--------|
-| 根因分析 | Design 阶段完成完整问题建模 | 定位缺陷根因和修复范围 |
-| Design 阶段 | Brainstorm + Design Doc | **跳过** |
-| Build 阶段 | 完整构建流程 | 完整 |
-| Verify 阶段 | 完整验证 | 完整 |
-| Archive 阶段 | 完整归档 | 完整 |
+如果修复演变为架构调整、跨多个模块、新依赖、公共 API 或 Schema 变化，说明原因并等待确认，然后执行：
 
-## 工作流
-
-1. **根因分析** — 明确缺陷表现、复现路径、影响范围和根因；涉及源码行为时优先使用 CodeGraph 定位入口、调用链和影响面
-2. **Build** — 实现修复
-3. **Verify** — 验证修复结果
-4. **Archive** — 完整归档流程
-
-## 根因结论
-
-进入 Build 前记录最小根因结论：
-
-```md
-Root cause:
-- Symptom:
-- Reproduction:
-- Entry point:
-- Root cause:
-- Fix scope:
-- Verification:
+```bash
+smart run switch <change-name> official/full --confirmed
 ```
 
-## 配置
-
-```yaml
-# .smart.yaml
-workflow: bugfix
-phase: issue
-auto_transition: true
-```
-
-## 状态转换
-
-```
-root cause ──analysis-complete──→ build ──build-complete──→ verify ──verify-pass──→ archive
-```
-
-## 参考
-
-- `smart` 主技能
-- `smart/reference/smart-yaml-fields.md`
+用户可以选择已验证自定义流程替代官方 bugfix，解析后的 DAG 始终拥有最高优先级。

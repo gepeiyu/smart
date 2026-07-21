@@ -1,5 +1,8 @@
 # Context Compression Recovery Protocol
 
+The Smart run and freshly resolved workflow are the state source. Third-party artifacts are
+supporting evidence only and are read according to the current stage bindings.
+
 Canonical path: `smart/reference/context-recovery.md`
 
 This protocol is shared by all smart sub-skills that may trigger context compression. When the agent suspects context compression has occurred (previous conversation summarized, cannot find previously discussed content), follow this protocol to recover.
