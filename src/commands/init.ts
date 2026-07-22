@@ -454,7 +454,7 @@ export async function initCommand(targetPath: string, options: InitOptions = {})
   }
 
   if (scope === 'project') {
-    await createWorkingDirs(projectPath, language.id);
+    await createWorkingDirs(projectPath, language.id, selectedPlatformIds);
     await setProjectWorkflow(projectPath, workflowReference, workflowResolution);
   }
 

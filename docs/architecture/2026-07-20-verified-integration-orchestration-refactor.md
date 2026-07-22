@@ -1015,6 +1015,7 @@ export interface ResourceAction {
 - `dashboard` 是同一快照的只读 Application View，通过 `/api/snapshot` 刷新，不在浏览器端补造业务状态。
 - `doctor` 消费快照中的结构化 diagnostics，按 setup、workflow、platform、integration、run 分组；`--fix` 只执行诊断项显式携带的 fix action，且仅修改 Smart-managed 资源，随后必须重新采集快照。
 - `ProjectSnapshot.language` 默认继承初始化写入 `.smart/config.yaml` 的 `smart_language`。终端和 Dashboard 使用同一语言渲染用户可见文案；`--lang en|zh` 只覆盖本次展示，不修改项目配置。诊断 ID、枚举状态和建议命令不随语言变化。
+- 初始化将用户确认的平台列表持久化到 `.smart/config.yaml` 的 `platforms`。统一快照只用该列表确定 Integration 检查范围；目录检测只服务于初始化时的发现和推荐，第三方创建的平台目录不能隐式扩大项目支持范围。没有持久化列表的项目只能从项目级 Smart 技能推断，并要求用户重新运行 `smart init` 固化选择。
 - 损坏的 `.smart.yaml` 必须作为 `invalid` run 和阻断诊断返回，不能静默丢弃。
 - Workflow、Integration 或辅助产物的单点检测失败必须局部降级，不得使整个 Dashboard 无法加载。
 

@@ -16,9 +16,12 @@ async function project(): Promise<string> {
   return dir;
 }
 
-async function configuredProject(language: 'en' | 'zh' = 'en'): Promise<string> {
+async function configuredProject(
+  language: 'en' | 'zh' = 'en',
+  platformIds?: string[],
+): Promise<string> {
   const dir = await project();
-  await createWorkingDirs(dir, language);
+  await createWorkingDirs(dir, language, platformIds);
   const resolution = await resolveProjectWorkflow(
     dir,
     'official/quick',
@@ -63,6 +66,47 @@ describe('collectProjectSnapshot', () => {
       'openspec',
       'superpowers',
     ]);
+  });
+
+  it('uses configured platforms instead of unrelated platform directories', async () => {
+    const dir = await configuredProject('en', ['claude']);
+    await mkdir(path.join(dir, '.cursor', 'rules'), { recursive: true });
+    await writeFile(path.join(dir, '.cursor', 'rules', 'codegraph.mdc'), 'codegraph rule\n');
+
+    const snapshot = await collectProjectSnapshot(dir);
+
+    expect(snapshot.platforms.map((platform) => platform.id)).toEqual(['claude']);
+    expect(snapshot.integrations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          platforms: expect.objectContaining({ cursor: expect.anything() }),
+        }),
+      ]),
+    );
+  });
+
+  it('infers legacy platform selection only from project Smart skills', async () => {
+    const dir = await configuredProject();
+    await writeFile(
+      path.join(dir, '.smart', 'config.yaml'),
+      'smart_language: en\nauto_transition: true\n',
+    );
+    await mkdir(path.join(dir, '.claude', 'skills', 'smart'), { recursive: true });
+    await writeFile(path.join(dir, '.claude', 'skills', 'smart', 'SKILL.md'), '# Smart\n');
+    await mkdir(path.join(dir, '.cursor', 'rules'), { recursive: true });
+    await writeFile(path.join(dir, '.cursor', 'rules', 'codegraph.mdc'), 'codegraph rule\n');
+
+    const snapshot = await collectProjectSnapshot(dir);
+
+    expect(snapshot.platforms.map((platform) => platform.id)).toEqual(['claude']);
+    expect(snapshot.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'platform.configuration', status: 'warn' }),
+      ]),
+    );
+    expect(snapshot.integrations.every((integration) => !('cursor' in integration.platforms))).toBe(
+      true,
+    );
   });
 
   it('uses the language selected during initialization and supports an explicit override', async () => {

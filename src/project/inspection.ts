@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import YAML from 'yaml';
 import { detectPlatforms, hasSmartSkills } from '../core/detect.js';
+import { PLATFORMS, type Platform } from '../core/platforms.js';
 import { smartdocsChangesDir } from '../core/smart-paths.js';
 import { loadProjectIntegrationEnvironment } from '../integrations/environment.js';
 import type { IntegrationRuntime } from '../integrations/runtime.js';
@@ -108,7 +109,11 @@ async function inspectLayout(
 async function inspectConfiguration(
   projectPath: string,
   languageOverride: ProjectLanguage | undefined,
-): Promise<{ diagnostic: ProjectDiagnostic; language: ProjectLanguage }> {
+): Promise<{
+  diagnostic: ProjectDiagnostic;
+  language: ProjectLanguage;
+  platformIds: string[] | null;
+}> {
   const configPath = path.join(projectPath, '.smart', 'config.yaml');
   try {
     const parsed = YAML.parse(await fs.readFile(configPath, 'utf-8')) as unknown;
@@ -119,6 +124,7 @@ async function inspectConfiguration(
     const configuredLanguage = parseProjectLanguage(config.smart_language);
     const language = languageOverride ?? configuredLanguage ?? 'en';
     const issues: string[] = [];
+    let platformIds: string[] | null = null;
     if (!configuredLanguage) {
       issues.push(
         localize(language, 'smart_language must be en or zh', 'smart_language 必须为 en 或 zh'),
@@ -133,8 +139,43 @@ async function inspectConfiguration(
         ),
       );
     }
+    if (Object.hasOwn(config, 'platforms')) {
+      if (
+        !Array.isArray(config.platforms) ||
+        !config.platforms.every((id) => typeof id === 'string')
+      ) {
+        issues.push(
+          localize(
+            language,
+            'platforms must be a list of platform ids',
+            'platforms 必须是平台 ID 列表',
+          ),
+        );
+      } else {
+        const values = config.platforms as string[];
+        const knownIds = new Set(PLATFORMS.map((platform) => platform.id));
+        const unknown = values.filter((id) => !knownIds.has(id));
+        const duplicate = values.find((id, index) => values.indexOf(id) !== index);
+        if (unknown.length > 0) {
+          issues.push(
+            localize(
+              language,
+              `unknown platform ids: ${unknown.join(', ')}`,
+              `未知平台 ID：${unknown.join('、')}`,
+            ),
+          );
+        } else if (duplicate) {
+          issues.push(
+            localize(language, `duplicate platform id: ${duplicate}`, `平台 ID 重复：${duplicate}`),
+          );
+        } else {
+          platformIds = values;
+        }
+      }
+    }
     return {
       language,
+      platformIds,
       diagnostic: diagnostic({
         id: 'setup.configuration',
         status: issues.length === 0 ? 'pass' : 'warn',
@@ -154,6 +195,7 @@ async function inspectConfiguration(
     const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
     return {
       language,
+      platformIds: null,
       diagnostic: diagnostic({
         id: 'setup.configuration',
         status: 'fail',
@@ -177,31 +219,52 @@ async function inspectConfiguration(
 async function inspectPlatforms(
   projectPath: string,
   language: ProjectLanguage,
+  configuredPlatformIds: string[] | null,
 ): Promise<{
   platforms: PlatformSnapshot[];
   diagnostics: ProjectDiagnostic[];
   platformIds: string[];
 }> {
-  const detected = await detectPlatforms(projectPath);
-  if (detected.length === 0) {
+  const inferred = configuredPlatformIds === null;
+  let selected: Platform[];
+  if (inferred) {
+    const detected = await detectPlatforms(projectPath);
+    const installed = await Promise.all(
+      detected.map(async (platform) => ({
+        platform,
+        installed: await hasSmartSkills(platform, projectPath, 'project'),
+      })),
+    );
+    selected = installed.filter((item) => item.installed).map((item) => item.platform);
+  } else {
+    const byId = new Map(PLATFORMS.map((platform) => [platform.id, platform]));
+    selected = configuredPlatformIds.flatMap((id) => {
+      const platform = byId.get(id);
+      return platform ? [platform] : [];
+    });
+  }
+
+  if (selected.length === 0) {
     return {
       platforms: [],
       platformIds: [],
       diagnostics: [
         diagnostic({
-          id: 'platform.detected',
+          id: 'platform.configuration',
           area: 'platform',
-          status: 'skip',
+          status: inferred ? 'warn' : 'skip',
           title: localize(language, 'AI platforms', 'AI 平台'),
           message: localize(
             language,
-            'No project AI platform directories detected',
-            '未检测到项目级 AI 平台目录',
+            inferred
+              ? 'No saved platform selection or project Smart skills found'
+              : 'No AI platforms are configured for this project',
+            inferred ? '未保存平台选择，也未找到项目级 Smart 技能' : '此项目未配置 AI 平台',
           ),
           remediation: localize(
             language,
-            'Run smart init after configuring an AI coding platform',
-            '配置 AI 编码平台后运行 smart init',
+            'Run smart init to select project platforms',
+            '运行 smart init 选择项目平台',
           ),
         }),
       ],
@@ -209,7 +272,7 @@ async function inspectPlatforms(
   }
 
   const platforms = await Promise.all(
-    detected.map(async (platform): Promise<PlatformSnapshot> => {
+    selected.map(async (platform): Promise<PlatformSnapshot> => {
       const [projectInstalled, globalInstalled] = await Promise.all([
         hasSmartSkills(platform, projectPath, 'project'),
         hasSmartSkills(platform, os.homedir(), 'global'),
@@ -226,9 +289,37 @@ async function inspectPlatforms(
     }),
   );
   const missing = platforms.filter((platform) => platform.skillsScope === 'missing');
+  if (inferred) {
+    return {
+      platforms,
+      platformIds: selected.map((platform) => platform.id),
+      diagnostics: [
+        diagnostic({
+          id: 'platform.configuration',
+          area: 'platform',
+          status: 'warn',
+          title: localize(language, 'AI platforms', 'AI 平台'),
+          message: localize(
+            language,
+            `Platform selection is not saved; inferred from project Smart skills: ${platforms
+              .map((platform) => platform.name)
+              .join(', ')}`,
+            `未保存平台选择；根据项目 Smart 技能推断为：${platforms
+              .map((platform) => platform.name)
+              .join('、')}`,
+          ),
+          remediation: localize(
+            language,
+            'Run smart init to save the platform selection',
+            '运行 smart init 保存平台选择',
+          ),
+        }),
+      ],
+    };
+  }
   return {
     platforms,
-    platformIds: detected.map((platform) => platform.id),
+    platformIds: selected.map((platform) => platform.id),
     diagnostics: [
       diagnostic({
         id: 'platform.skills',
@@ -695,7 +786,7 @@ export async function collectProjectSnapshot(
   const language = configuration.language;
   const [layoutChecks, platformInspection, changeNames, setupExists] = await Promise.all([
     inspectLayout(projectPath, language),
-    inspectPlatforms(projectPath, language),
+    inspectPlatforms(projectPath, language, configuration.platformIds),
     listChangeNames(projectPath),
     fileExists(path.join(projectPath, '.smart', 'setup.yaml')),
   ]);

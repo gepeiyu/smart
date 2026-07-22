@@ -94,7 +94,7 @@ describe('createWorkingDirs', () => {
     vi.mocked(ensureDir).mockResolvedValue(undefined);
     vi.mocked(writeFile).mockResolvedValue(undefined);
 
-    await createWorkingDirs('/project', 'zh');
+    await createWorkingDirs('/project', 'zh', ['claude']);
 
     expect(ensureDir).toHaveBeenCalledTimes(4);
     expect(ensureDir).toHaveBeenCalledWith(path.join('/project', '.smart'));
@@ -104,6 +104,11 @@ describe('createWorkingDirs', () => {
     expect(writeFile).toHaveBeenCalledWith(
       path.join('/project', '.smart', 'config.yaml'),
       expect.stringContaining('smart_language: zh'),
+      'utf-8',
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      path.join('/project', '.smart', 'config.yaml'),
+      expect.stringContaining('platforms:\n  - claude'),
       'utf-8',
     );
   });
@@ -129,6 +134,21 @@ describe('createWorkingDirs', () => {
     await createWorkingDirs('/project');
 
     expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it('updates the platform selection in an existing config', async () => {
+    vi.mocked(fileExists).mockResolvedValue(true);
+    vi.mocked(ensureDir).mockResolvedValue(undefined);
+    vi.mocked(readFile).mockResolvedValue('smart_language: zh\nauto_transition: true\n');
+    vi.mocked(writeFile).mockResolvedValue(undefined);
+
+    await createWorkingDirs('/project', 'zh', ['claude']);
+
+    expect(writeFile).toHaveBeenCalledWith(
+      path.join('/project', '.smart', 'config.yaml'),
+      expect.stringContaining('platforms:\n  - claude'),
+      'utf-8',
+    );
   });
 });
 

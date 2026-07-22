@@ -1,6 +1,7 @@
 import path from 'path';
 import { readFile, writeFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
+import YAML from 'yaml';
 import { fileExists, readJson, copyFile, ensureDir } from '../utils/file-system.js';
 import { getPlatformSkillsDir, type Platform } from './platforms.js';
 import type { InstallScope } from './types.js';
@@ -555,7 +556,16 @@ function normalizeSmartLanguage(language: string | undefined): 'en' | 'zh' {
   return language === 'zh' ? 'zh' : 'en';
 }
 
-async function createWorkingDirs(projectPath: string, language?: string): Promise<void> {
+function renderConfiguredPlatforms(platformIds: string[]): string[] {
+  if (platformIds.length === 0) return ['platforms: []'];
+  return ['platforms:', ...platformIds.map((platformId) => `  - ${platformId}`)];
+}
+
+async function createWorkingDirs(
+  projectPath: string,
+  language?: string,
+  platformIds?: string[],
+): Promise<void> {
   const dirs = [
     path.join(projectPath, '.smart'),
     path.join(projectPath, '.smart', 'workflows'),
@@ -566,11 +576,14 @@ async function createWorkingDirs(projectPath: string, language?: string): Promis
   const configPath = path.join(projectPath, '.smart', 'config.yaml');
   if (!(await fileExists(configPath))) {
     const smartLanguage = normalizeSmartLanguage(language);
+    const configuredPlatforms = [...new Set(platformIds ?? [])];
     await writeFile(
       configPath,
       [
         '# smart_language: en | zh',
         `smart_language: ${smartLanguage}`,
+        '# AI platforms enabled for this project',
+        ...renderConfiguredPlatforms(configuredPlatforms),
         '# context_compression: off | beta',
         'context_compression: off',
         '# review_mode: off | standard | thorough',
@@ -581,7 +594,16 @@ async function createWorkingDirs(projectPath: string, language?: string): Promis
       ].join('\n'),
       'utf-8',
     );
+    return;
   }
+
+  if (platformIds === undefined) return;
+  const document = YAML.parseDocument(await readFile(configPath, 'utf-8'));
+  if (document.errors.length > 0) {
+    throw new Error(`Invalid Smart configuration: ${document.errors[0].message}`);
+  }
+  document.set('platforms', [...new Set(platformIds)]);
+  await writeFile(configPath, document.toString(), 'utf-8');
 }
 
 export {
