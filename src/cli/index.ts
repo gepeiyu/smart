@@ -73,11 +73,19 @@ program
 
 program
   .command('status')
-  .description('Show active changes and workflow status')
+  .description('Show project health and workflow runs')
   .argument('[path]', 'Project path')
+  .option('--all', 'Include completed runs')
+  .option('--change <change>', 'Show one workflow run')
+  .option('--verbose', 'Show platforms, integrations, Git, and all diagnostics')
   .option('--json', 'Output as JSON')
+  .option('--lang <lang>', 'Override display language (en | zh)')
+  .option('--language <language>', 'Override display language (en | zh)')
   .action(async (path?: string, options?: Record<string, unknown>) => {
-    await statusCommand(path || process.cwd(), options || {});
+    const normalizedOptions = { ...(options || {}) };
+    if (!normalizedOptions.language && normalizedOptions.lang)
+      normalizedOptions.language = normalizedOptions.lang;
+    await statusCommand(path || process.cwd(), normalizedOptions);
   });
 
 program
@@ -87,18 +95,28 @@ program
   .option('-p, --port <port>', 'Server port')
   .option('--no-open', 'Do not open browser')
   .option('--json', 'Output snapshot as JSON and exit')
+  .option('--lang <lang>', 'Override display language (en | zh)')
+  .option('--language <language>', 'Override display language (en | zh)')
   .action(async (path?: string, options?: Record<string, unknown>) => {
-    await dashboardCommand(path || process.cwd(), options || {});
+    const normalizedOptions = { ...(options || {}) };
+    if (!normalizedOptions.language && normalizedOptions.lang)
+      normalizedOptions.language = normalizedOptions.lang;
+    await dashboardCommand(path || process.cwd(), normalizedOptions);
   });
 
 program
   .command('doctor')
-  .description('Diagnose Smart installation health')
+  .description('Diagnose project, workflow, platform, and integration health')
   .argument('[path]', 'Project path')
   .option('--fix', 'Attempt to auto-fix issues')
   .option('--json', 'Output as JSON')
+  .option('--lang <lang>', 'Override display language (en | zh)')
+  .option('--language <language>', 'Override display language (en | zh)')
   .action(async (path?: string, options?: Record<string, unknown>) => {
-    await doctorCommand(path || process.cwd(), options || {});
+    const normalizedOptions = { ...(options || {}) };
+    if (!normalizedOptions.language && normalizedOptions.lang)
+      normalizedOptions.language = normalizedOptions.lang;
+    await doctorCommand(path || process.cwd(), normalizedOptions);
   });
 
 program
