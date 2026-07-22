@@ -1,71 +1,46 @@
 ---
 name: smart-build
-description: "Smart Build — Phase 3 of the Smart workflow. Plan and Build phase: creates implementation plan, selects isolation and execution method, dispatches tasks. Owned by Superpowers. Invoked by /smart-build."
+description: "Smart Build stage adapter. Executes the resolved implementation contract with test and review evidence."
 ---
 
-# Smart Build — Phase 3: Plan and Build
+# Smart Build Stage
 
-**Phase Owner**: Superpowers
-
-## Entry Conditions
-
-- Change has Design Doc (design phase complete)
-- `phase: build` in `.smart.yaml`
-- Invoked via `/smart-build` from the main `/smart` dispatcher
+Read `smart/reference/workflow-runtime.md`. Continue only when `currentStage` is `build`.
 
 ## Artifact Language
 
-Before creating or updating artifacts, read `.smart/config.yaml` when it exists. Use Chinese for `smart_language: zh` and English for `smart_language: en`. If the field is absent, use the language of the user request that triggered the workflow. When resuming a change whose existing artifacts have a clear dominant language, preserve that language unless the user explicitly requests a switch.
+Read `.smart/config.yaml`. With `smart_language: zh`, write artifact prose in Chinese; with
+`smart_language: en`, use English. If unset, use the user request language. Preserve an existing
+artifact's dominant language. Keep file names unchanged; also preserve paths, identifiers, metadata,
+and machine values.
 
-Apply the resolved language to prose in `docs/superpowers/plans/` and `tasks.md`. Keep paths, file names, metadata keys, commands, identifiers, and machine-readable values unchanged.
+## Decisions
 
-## Steps
+Before implementation, obtain explicit choices required by the contract: branch/worktree isolation,
+direct or plan-driven execution, TDD mode, and review depth. Inspect and preserve unrelated dirty
+worktree changes using `smart/reference/dirty-worktree.md`.
 
-### Step 1: Create Implementation Plan
+## Execute
 
-1. Read the Design Doc
-2. Create `docs/superpowers/plans/YYYY-MM-DD-feature.md` with task breakdown
-3. Update `tasks.md` to match the plan
+For `superpowers.build.instruction-driven.v1`, load the installed Superpowers planning and execution
+capabilities. Produce an implementation plan when required, then implement in task-sized units with
+tests and review evidence. When subagents are selected, follow
+`smart/reference/subagent-dispatch.md`; the coordinator must preserve durable task progress.
 
-### Step 2: Plan-Ready Pause (Decision Point)
+For another registered contract, dispatch only its declared actors. Assistants can supply code
+intelligence, but implementation ownership remains with owner/executors.
 
-1. Present the plan to the user
-2. Ask: continue to build or pause? (`build_pause` mechanism)
-3. If continue, ask user to choose:
-   - **Isolation**: `branch` or `worktree`
-   - **Execution method**: `direct`, `subagent-driven-development`, or `executing-plans`
-   - **TDD mode**: `tdd` or `direct`
+Stop and use `smart/reference/debug-gate.md` on test or build failures. Do not mark work complete
+because an agent reported success; inspect the worktree and run the relevant verification commands.
 
-### Step 3: Execute
+## Complete
 
-- **`direct`**: Execute tasks one by one, commit after each task
-- **`executing-plans`**: Load the executing-plans skill and follow its instructions
-- **`subagent-driven-development`**: Load the subagent-driven-development skill; main session is coordinator only. Follow `smart/reference/subagent-dispatch.md` for Smart-specific extensions
-
-### Step 4: Guard and Advance
-
-1. Run guard:
-   ```bash
-   "$SMART_BASH" "$SMART_GUARD" <change-name> build --apply
-   ```
-2. Resolve next action:
-   ```bash
-   "$SMART_BASH" "$SMART_STATE" next <change-name>
-   ```
-
-## Script Location
+Require every declared `required_output` for implementation, test, and review. Record each one with
+`smart run evidence <change-name> <artifact-id> <evidence-value>`, then advance exactly once:
 
 ```bash
-SMART_ENV="${SMART_ENV:-$(find . "$HOME"/.*/skills "$HOME/.config" "$HOME/.gemini" -path '*/smart/scripts/smart-env.sh' -type f -print -quit 2>/dev/null)}"
-if [ -z "$SMART_ENV" ]; then
-  echo "ERROR: smart-env.sh not found. Ensure the smart skill is installed." >&2
-  return 1
-fi
-. "$SMART_ENV"
-
-if [ -z "$SMART_GUARD" ] || [ -z "$SMART_STATE" ] || [ -z "$SMART_HANDOFF" ]; then
-  echo "ERROR: Smart scripts not found. Ensure the smart skill is installed." >&2
-  echo "Expected path pattern: */smart/scripts/smart-*.sh under project or platform skill directories" >&2
-  return 1
-fi
+smart run advance <change-name> --stage build
 ```
+
+If the scope exceeds bugfix/quick criteria, obtain approval and switch with
+`smart run switch <change-name> official/full --confirmed` before continuing.

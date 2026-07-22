@@ -1,5 +1,8 @@
 # 子代理调度
 
+先解析当前 build stage。下文涉及 Superpowers 或 OpenSpec 的内容仅是官方适配器细节，只有对应集成
+被 stage 声明时才适用。协调进度写入 `smartdocs/changes/<name>/coordination/`，不得写入第三方变更目录。
+
 ## 概述
 
 Build 阶段的 `subagent-driven-development` 模式使用独立子代理完成每个任务的实现。

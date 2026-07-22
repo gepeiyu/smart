@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import type { GitSnapshot, CommitInfo } from './types.js';
+import type { GitSnapshot, CommitInfo } from '../project/types.js';
 
 export function collectGitSnapshot(projectPath: string): GitSnapshot | null {
   try {
@@ -7,7 +7,7 @@ export function collectGitSnapshot(projectPath: string): GitSnapshot | null {
       cwd: projectPath,
       encoding: 'utf-8',
       stdio: 'pipe',
-    }).trim();
+    }).trimEnd();
 
     const head = execSync('git rev-parse HEAD', {
       cwd: projectPath,
@@ -21,9 +21,14 @@ export function collectGitSnapshot(projectPath: string): GitSnapshot | null {
       cwd: projectPath,
       encoding: 'utf-8',
       stdio: 'pipe',
-    }).trim();
+    }).trimEnd();
 
-    const dirtyFiles = statusOut ? statusOut.split('\n').map(l => l.slice(3).trim()).filter(Boolean) : [];
+    const dirtyFiles = statusOut
+      ? statusOut
+          .split('\n')
+          .map((l) => l.slice(3).trim())
+          .filter(Boolean)
+      : [];
     const dirty = dirtyFiles.length > 0;
 
     const logOut = execSync('git log --oneline --max-count=5 --format="%H|%h|%s|%an|%ai"', {
@@ -33,7 +38,7 @@ export function collectGitSnapshot(projectPath: string): GitSnapshot | null {
     }).trim();
 
     const recentCommits: CommitInfo[] = logOut
-      ? logOut.split('\n').map(line => {
+      ? logOut.split('\n').map((line) => {
           const [hash, hashShort, message, author, date] = line.split('|');
           return { hash, hashShort, message, author, date };
         })

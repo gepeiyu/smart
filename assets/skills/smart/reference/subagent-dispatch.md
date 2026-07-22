@@ -1,5 +1,9 @@
 # Smart Extensions for Subagent-Driven Development
 
+Resolve the current build stage first. References to Superpowers or OpenSpec below are official
+adapter details and apply only when those integrations are declared by the stage. Store coordinator
+progress under `smartdocs/changes/<name>/coordination/`, not in a third-party change directory.
+
 Canonical path: `smart/reference/subagent-dispatch.md`
 
 This document provides Smart-specific extensions applied **on top of** the Superpowers `subagent-driven-development` skill. The skill handles the core dispatch loop (fresh implementer per task → spec compliance review → code quality review → next task) and enforces continuous execution. This document adds Smart-specific real background dispatch, task tracking, state verification, and context recovery. If the Superpowers skill conflicts with this document, the more specific Smart constraints here take precedence.

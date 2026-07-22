@@ -1,188 +1,241 @@
 import path from 'path';
-import { execFileSync } from 'child_process';
-import { fileExists, readDir } from '../utils/file-system.js';
+import { createWorkingDirs } from '../core/skills.js';
 import { detectPlatforms } from '../core/detect.js';
-import { resolveOpenSpecCommand } from '../core/openspec.js';
-import { hasCodegraphProjectIndex, resolveCodegraphCommand } from '../core/codegraph.js';
-import { openSpecChangesDir, resolveSmartYamlPath } from '../core/smart-paths.js';
+import { loadProjectIntegrationEnvironment } from '../integrations/environment.js';
+import { collectProjectSnapshot } from '../project/inspection.js';
+import { localize } from '../project/language.js';
+import type {
+  DiagnosticArea,
+  DiagnosticFix,
+  DiagnosticStatus,
+  ProjectDiagnostic,
+  ProjectLanguage,
+  ProjectSnapshot,
+} from '../project/types.js';
 
-interface CheckResult {
-  name: string;
-  status: 'pass' | 'fail' | 'warn' | 'skip';
+interface DoctorOptions {
+  fix?: boolean;
+  json?: boolean;
+  language?: string;
+}
+
+interface FixResult {
+  kind: DiagnosticFix['kind'];
+  target: string;
+  status: 'fixed' | 'skipped' | 'failed';
   message: string;
 }
 
-function checkOpenSpecCLI(cwd: string): CheckResult {
-  const command = resolveOpenSpecCommand(cwd);
-  return {
-    name: 'OpenSpec CLI',
-    status: command ? 'pass' : 'fail',
-    message: command ? `OpenSpec CLI is installed (${command.location})` : 'OpenSpec CLI is not installed. Run: npm install -g @fission-ai/openspec@latest',
-  };
-}
+const AREA_LABELS: Record<DiagnosticArea, [string, string]> = {
+  setup: ['Setup', '项目设置'],
+  workflow: ['Workflow', '工作流'],
+  platform: ['Platforms', '平台'],
+  integration: ['Integrations', '集成'],
+  run: ['Runs', '运行'],
+};
 
-async function checkWorkingDirs(cwd: string): Promise<CheckResult> {
-  const expected = ['.smart', 'smartdocs', 'smartdocs/changes', 'docs', 'docs/superpowers', 'docs/superpowers/specs', 'docs/superpowers/plans', 'openspec', 'openspec/changes'];
-  const missing = [];
-
-  for (const dir of expected) {
-    if (!(await fileExists(path.join(cwd, dir)))) {
-      missing.push(dir);
-    }
+function checkIcon(status: DiagnosticStatus): string {
+  switch (status) {
+    case 'pass':
+      return 'OK';
+    case 'warn':
+      return 'WARN';
+    case 'fail':
+      return 'FAIL';
+    case 'skip':
+      return 'SKIP';
   }
-
-  return {
-    name: 'Working directories',
-    status: missing.length === 0 ? 'pass' : missing.length === expected.length ? 'fail' : 'warn',
-    message: missing.length === 0
-      ? 'All working directories present'
-      : `Missing: ${missing.join(', ')}`,
-  };
 }
 
-async function checkSkills(cwd: string): Promise<CheckResult> {
-  const platforms = await detectPlatforms(cwd);
-
-  if (platforms.length === 0) {
-    return {
-      name: 'Smart skills',
-      status: 'skip',
-      message: 'No AI platforms detected in this project',
-    };
+function uniqueFixes(checks: ProjectDiagnostic[]): DiagnosticFix[] {
+  const fixes = new Map<string, DiagnosticFix>();
+  for (const check of checks) {
+    if (!check.fix) continue;
+    const key = `${check.fix.kind}:${check.fix.integrationId ?? ''}`;
+    fixes.set(key, check.fix);
   }
-
-  let totalSkills = 0;
-  let installedSkills = 0;
-
-  for (const platform of platforms) {
-    const skillsDir = path.join(cwd, platform.skillsDir, 'skills', 'smart');
-    const hasSkill = await fileExists(skillsDir);
-    totalSkills++;
-    if (hasSkill) installedSkills++;
-  }
-
-  return {
-    name: 'Smart skills',
-    status: installedSkills === totalSkills ? 'pass' : 'warn',
-    message: `Skills installed on ${installedSkills}/${totalSkills} platforms`,
-  };
+  return [...fixes.values()];
 }
 
-async function checkScripts(cwd: string): Promise<CheckResult> {
-  const smartDir = path.join(cwd, '.smart');
-  const hasDir = await fileExists(smartDir);
-  return {
-    name: 'Scripts',
-    status: hasDir ? 'pass' : 'warn',
-    message: hasDir ? '.smart directory exists' : '.smart directory not found',
-  };
-}
+async function applyFixes(projectPath: string, snapshot: ProjectSnapshot): Promise<FixResult[]> {
+  const results: FixResult[] = [];
+  const fixes = uniqueFixes(snapshot.diagnostics);
+  const language = snapshot.language;
 
-async function checkCodegraph(cwd: string): Promise<CheckResult> {
-  const command = resolveCodegraphCommand(cwd);
-  const hasIndex = await hasCodegraphProjectIndex(cwd);
-  const cliStatus = command ? `CLI installed (${command.location})` : 'CLI not installed';
-  const indexStatus = hasIndex ? 'project index found' : 'project index not found';
-  return {
-    name: 'CodeGraph',
-    status: command && hasIndex ? 'pass' : command ? 'warn' : 'fail',
-    message: `${cliStatus}; ${indexStatus}`,
-  };
-}
-
-async function checkConfig(cwd: string): Promise<CheckResult> {
-  const projectConfigPath = path.join(cwd, '.smart', 'config.yaml');
-  const hasProjectConfig = await fileExists(projectConfigPath);
-
-  const changesDir = openSpecChangesDir(cwd);
-  const hasChangesDir = await fileExists(changesDir);
-  let smartYamlCount = 0;
-  if (hasChangesDir) {
-    const changeDirs = await readDir(changesDir);
-    for (const changeName of changeDirs) {
-      if (await resolveSmartYamlPath(cwd, changeName)) smartYamlCount++;
-    }
-  }
-
-  const messages: string[] = [];
-  let status: 'pass' | 'warn' | 'fail' = 'pass';
-
-  if (hasProjectConfig) {
+  if (fixes.some((fix) => fix.kind === 'create-project-layout')) {
     try {
-      const { promises: fs } = await import('fs');
-      const content = await fs.readFile(projectConfigPath, 'utf-8');
-      const hasPhase = content.includes('phase') || content.includes('auto_transition');
-      messages.push(`.smart/config.yaml ${hasPhase ? 'valid' : 'may be incomplete'}`);
-      if (!hasPhase) status = 'warn';
-    } catch {
-      messages.push('.smart/config.yaml not readable');
-      status = 'warn';
+      await createWorkingDirs(projectPath, language);
+      results.push({
+        kind: 'create-project-layout',
+        target: projectPath,
+        status: 'fixed',
+        message: localize(
+          language,
+          'Created missing Smart project directories and configuration',
+          '已创建缺失的 Smart 项目目录和配置',
+        ),
+      });
+    } catch (error) {
+      results.push({
+        kind: 'create-project-layout',
+        target: projectPath,
+        status: 'failed',
+        message: (error as Error).message,
+      });
     }
-  } else {
-    messages.push('.smart/config.yaml not found');
-    status = 'fail';
   }
 
-  if (smartYamlCount > 0) {
-    messages.push(`${smartYamlCount} change(s) with .smart.yaml`);
-  } else if (hasChangesDir) {
-    messages.push('no changes with .smart.yaml found');
-    if (status === 'pass') status = 'warn';
-  } else {
-    messages.push('openspec/changes/ not found');
+  const integrationFixes = fixes.filter(
+    (fix): fix is DiagnosticFix & { integrationId: string } =>
+      fix.kind === 'install-integration' && typeof fix.integrationId === 'string',
+  );
+  if (integrationFixes.length === 0) return results;
+
+  let environment: Awaited<ReturnType<typeof loadProjectIntegrationEnvironment>>;
+  try {
+    environment = await loadProjectIntegrationEnvironment(projectPath);
+  } catch (error) {
+    return [
+      ...results,
+      ...integrationFixes.map((fix): FixResult => ({
+        kind: fix.kind,
+        target: fix.integrationId,
+        status: 'failed',
+        message: localize(
+          language,
+          `Cannot load integration environment: ${(error as Error).message}`,
+          `无法加载集成环境：${(error as Error).message}`,
+        ),
+      })),
+    ];
   }
 
-  return { name: 'Configuration file', status, message: messages.join('; ') };
+  const platformIds = (await detectPlatforms(projectPath)).map((platform) => platform.id);
+  for (const fix of integrationFixes) {
+    const runtime = environment.runtimes.get(fix.integrationId);
+    if (!runtime) {
+      results.push({
+        kind: fix.kind,
+        target: fix.integrationId,
+        status: 'failed',
+        message: localize(language, 'Integration runtime is unavailable', '集成运行时不可用'),
+      });
+      continue;
+    }
+    if (runtime.manifest.management !== 'smart') {
+      results.push({
+        kind: fix.kind,
+        target: fix.integrationId,
+        status: 'skipped',
+        message: localize(
+          language,
+          'User-managed integrations are never modified by Smart Doctor',
+          'Smart Doctor 不会修改由用户管理的集成',
+        ),
+      });
+      continue;
+    }
+    try {
+      const result = await runtime.install({
+        projectPath,
+        baseDir: projectPath,
+        scope: 'project',
+        platformIds,
+        installDependency: true,
+      });
+      results.push({
+        kind: fix.kind,
+        target: fix.integrationId,
+        status:
+          result.status === 'failed' ? 'failed' : result.status === 'skipped' ? 'skipped' : 'fixed',
+        message: result.message ?? result.status,
+      });
+    } catch (error) {
+      results.push({
+        kind: fix.kind,
+        target: fix.integrationId,
+        status: 'failed',
+        message: (error as Error).message,
+      });
+    }
+  }
+  return results;
 }
 
-export async function doctorCommand(targetPath: string, opts?: Record<string, unknown>): Promise<void> {
-  const cwd = targetPath || process.cwd();
-  const fixMode = opts?.fix === true;
-  const jsonOutput = opts?.json === true;
-
-  if (!jsonOutput) console.log(`Smart Doctor — ${cwd}\n`);
-
-  const results: CheckResult[] = [
-    checkOpenSpecCLI(cwd),
-    await checkWorkingDirs(cwd),
-    await checkSkills(cwd),
-    await checkScripts(cwd),
-    await checkCodegraph(cwd),
-    await checkConfig(cwd),
-  ];
-
-  if (jsonOutput) {
-    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
-    return;
-  }
-
-  let passed = 0;
-  let failed = 0;
-  let warnings = 0;
-
-  for (const result of results) {
-    const icon = result.status === 'pass' ? '✓' : result.status === 'fail' ? '✗' : result.status === 'warn' ? '⚠' : '○';
-    console.log(`  ${icon} ${result.name}: ${result.message}`);
-    if (result.status === 'pass') passed++;
-    else if (result.status === 'fail') failed++;
-    else if (result.status === 'warn') warnings++;
-  }
-
-  console.log(`\n${passed} passed, ${warnings} warnings, ${failed} failed`);
-
-  if (fixMode && failed > 0) {
-    console.log('\nAttempting auto-fix...');
-    if (results[0].status === 'fail') {
-      try {
-        execFileSync('npm', ['install', '-g', '@fission-ai/openspec@latest'], { stdio: 'inherit', timeout: 120000 });
-        console.log('  ✓ OpenSpec CLI installed');
-      } catch {
-        console.log('  ✗ Failed to install OpenSpec CLI');
+function printChecks(snapshot: ProjectSnapshot): void {
+  const language = snapshot.language;
+  for (const area of Object.keys(AREA_LABELS) as DiagnosticArea[]) {
+    const checks = snapshot.diagnostics.filter((item) => item.area === area);
+    if (checks.length === 0) continue;
+    console.log(`\n${localize(language, ...AREA_LABELS[area])}`);
+    for (const check of checks) {
+      console.log(`  [${checkIcon(check.status)}] ${check.title}: ${check.message}`);
+      if (check.remediation && check.status !== 'pass') {
+        console.log(
+          localize(
+            language,
+            `         Next: ${check.remediation}`,
+            `         下一步：${check.remediation}`,
+          ),
+        );
       }
     }
   }
+}
 
-  if (!fixMode && failed > 0) {
-    console.log('\nRun with --fix to attempt auto-repair.');
+function printFixes(results: FixResult[], language: ProjectLanguage): void {
+  if (results.length === 0) return;
+  console.log(localize(language, '\nRepairs', '\n修复结果'));
+  for (const result of results) {
+    console.log(`  [${result.status.toUpperCase()}] ${result.target}: ${result.message}`);
+  }
+}
+
+export async function doctorCommand(
+  targetPath: string,
+  opts: DoctorOptions | Record<string, unknown> = {},
+): Promise<void> {
+  const options = opts as DoctorOptions;
+  const projectPath = path.resolve(targetPath || process.cwd());
+  const snapshotOptions = { language: options.language };
+  const before = await collectProjectSnapshot(projectPath, snapshotOptions);
+  const fixes = options.fix ? await applyFixes(projectPath, before) : [];
+  const snapshot = options.fix
+    ? await collectProjectSnapshot(projectPath, snapshotOptions)
+    : before;
+  const language = snapshot.language;
+
+  if (options.json) {
+    process.stdout.write(JSON.stringify({ snapshot, fixes }, null, 2) + '\n');
+    return;
+  }
+
+  const healthLabels: Record<ProjectSnapshot['health'], [string, string]> = {
+    healthy: ['HEALTHY', '健康'],
+    attention: ['ATTENTION', '需关注'],
+    blocked: ['BLOCKED', '已阻断'],
+    uninitialized: ['NOT INITIALIZED', '未初始化'],
+  };
+  console.log(
+    `Smart ${localize(language, 'Doctor', '诊断')}  ${localize(language, ...healthLabels[snapshot.health])}`,
+  );
+  console.log(projectPath);
+  printChecks(snapshot);
+  printFixes(fixes, language);
+  console.log(
+    localize(
+      language,
+      `\n${snapshot.diagnostics.filter((item) => item.status === 'pass').length} passed, ${snapshot.summary.warnings} warnings, ${snapshot.summary.failures} failed`,
+      `\n${snapshot.diagnostics.filter((item) => item.status === 'pass').length} 项通过，${snapshot.summary.warnings} 项警告，${snapshot.summary.failures} 项失败`,
+    ),
+  );
+  if (!options.fix && uniqueFixes(snapshot.diagnostics).length > 0) {
+    console.log(
+      localize(
+        language,
+        '\nRun smart doctor --fix to apply the listed automatic repairs.',
+        '\n运行 smart doctor --fix 执行列出的自动修复。',
+      ),
+    );
   }
 }

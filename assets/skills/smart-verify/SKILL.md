@@ -1,76 +1,48 @@
 ---
 name: smart-verify
-description: "Smart Verify — Phase 4 of the Smart workflow. Verify and Close phase: runs verification, handles verification results, and manages branch handling. Invoked by /smart-verify."
+description: "Smart Verify stage adapter. Coordinates resolved executors and produces auditable verification evidence."
 ---
 
-# Smart Verify — Phase 4: Verify and Close
+# Smart Verify Stage
 
-**Phase Owner**: Both (OpenSpec + Superpowers)
-
-## Entry Conditions
-
-- Build phase complete (all tasks checked off)
-- `phase: verify` in `.smart.yaml`
-- Invoked via `/smart-verify` from the main `/smart` dispatcher
+Read `smart/reference/workflow-runtime.md`. Continue only when `currentStage` is `verify`.
 
 ## Artifact Language
 
-Before creating or updating artifacts, read `.smart/config.yaml` when it exists. Use Chinese for `smart_language: zh` and English for `smart_language: en`. If the field is absent, use the language of the user request that triggered the workflow. When resuming a change whose existing artifacts have a clear dominant language, preserve that language unless the user explicitly requests a switch.
+Read `.smart/config.yaml`. With `smart_language: zh`, write artifact prose in Chinese; with
+`smart_language: en`, use English. If unset, use the user request language. Preserve an existing
+artifact's dominant language. Keep file names unchanged; also preserve paths, identifiers, metadata,
+and machine values.
 
-Apply the resolved language to prose in `verification-report.md` and to accepted-deviation updates in `tasks.md`. Keep paths, file names, metadata keys, commands, identifiers, and machine-readable values unchanged.
+## Execute
 
-## Steps
+1. Load all declared inputs and inspect the actual worktree, not only prior summaries.
+2. Dispatch exactly the resolved owner/executors and collect evidence from each.
+3. Run appropriate tests, builds, static checks, acceptance checks, and artifact consistency checks.
+4. Handle the branch/worktree through an explicit user decision when required.
 
-### Step 1: Determine Verification Level
+For `smart.verify-coordination.v1`, combine executor evidence into one verification report. The
+report must identify commands run, results, unmet requirements, accepted deviations, and residual
+risks. Assistants may provide context but cannot turn a failure into a pass.
 
-```bash
-"$SMART_BASH" "$SMART_STATE" scale <name>
-```
+## Failure
 
-### Step 2: Run Verification
-
-1. Run project verification commands
-2. Check tasks.md — all tasks must be checked
-3. Verify spec compliance
-
-### Step 3: Handle Results
-
-- **Pass**: Write verification report and proceed
-- **Fail** (decision point):
-  1. List failed items
-  2. Ask user: fix failures or accept deviation?
-  3. If fix → run `"$SMART_BASH" "$SMART_STATE" transition <name> verify-fail` and invoke `/smart-build`
-  4. If accept → record accepted deviations in tasks.md
-
-### Step 4: Branch Handling (Decision Point)
-
-1. Present branch handling options to the user
-2. Execute the chosen branch handling strategy
-
-### Step 5: Guard and Advance
-
-1. Run guard:
-   ```bash
-   "$SMART_BASH" "$SMART_GUARD" <change-name> verify --apply
-   ```
-2. Resolve next action:
-   ```bash
-   "$SMART_BASH" "$SMART_STATE" next <change-name>
-   ```
-
-## Script Location
+On failure, write the report and block the run:
 
 ```bash
-SMART_ENV="${SMART_ENV:-$(find . "$HOME"/.*/skills "$HOME/.config" "$HOME/.gemini" -path '*/smart/scripts/smart-env.sh' -type f -print -quit 2>/dev/null)}"
-if [ -z "$SMART_ENV" ]; then
-  echo "ERROR: smart-env.sh not found. Ensure the smart skill is installed." >&2
-  return 1
-fi
-. "$SMART_ENV"
-
-if [ -z "$SMART_GUARD" ] || [ -z "$SMART_STATE" ] || [ -z "$SMART_HANDOFF" ]; then
-  echo "ERROR: Smart scripts not found. Ensure the smart skill is installed." >&2
-  echo "Expected path pattern: */smart/scripts/smart-*.sh under project or platform skill directories" >&2
-  return 1
-fi
+smart run block <change-name> "verification failed: <summary>"
 ```
+
+Ask whether to fix or explicitly accept a permitted deviation. Resume only after the chosen action
+is complete. Never advance a failed verification stage.
+
+## Complete
+
+After all declared `required_output` values pass, record each with
+`smart run evidence <change-name> <artifact-id> <evidence-value>`, then advance:
+
+```bash
+smart run advance <change-name> --stage verify
+```
+
+References: `smart/reference/debug-gate.md`, `smart/reference/decision-point.md`.

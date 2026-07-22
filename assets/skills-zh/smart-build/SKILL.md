@@ -1,73 +1,30 @@
 ---
 name: smart-build
-description: Smart Build 阶段 — 子代理调度、TDD 实现、代码审查、提交
+description: Smart Build 阶段适配器 — 执行解析后的实现 contract，形成测试和评审证据
 ---
 
 # Smart Build 阶段
 
-## 职责
-
-本阶段由 Superpowers 负责，产生实现计划和代码提交。
+先阅读 `smart/reference/workflow-runtime.md`。只有 `currentStage=build` 时继续。
 
 ## 产物语言
 
-创建或更新产物前，读取已有的 `.smart/config.yaml`。`smart_language: zh` 使用中文，`smart_language: en` 使用英文；字段不存在时，使用触发本次工作流的用户请求语言。恢复已有变更时，如果现有产物已有明确主导语言，应保持该语言，除非用户明确要求切换。
+读取 `.smart/config.yaml`。`smart_language: zh` 使用中文，`smart_language: en` 使用英文；字段缺失时
+使用用户请求语言。已有产物保持其主导语言。路径、文件名、标识符、元数据和机器值保持不变。
 
-将解析后的语言用于 `docs/superpowers/plans/` 和 `tasks.md` 的正文。路径、文件名、元数据键、命令、标识符和机器可读值保持不变。
+实现前获取 contract 要求的明确选择：branch/worktree 隔离、直接或计划驱动执行、TDD 模式和评审深度。
+按 `dirty-worktree.md` 保护无关用户改动。
 
-## 工作流
+对于 `superpowers.build.instruction-driven.v1`，加载已安装 Superpowers 的规划与执行能力；需要时生成
+实现计划，再按任务粒度实现、测试和评审。选择子代理时遵循 `subagent-dispatch.md`，协调者必须维护
+持久任务进度。其他 contract 只调度声明的 actors；assistant 可以提供代码上下文，但不拥有实现。
 
-1. **选择构建模式** — `subagent-driven-development` / `executing-plans` / `direct`
-2. **选择隔离模式** — `branch`（分支） / `worktree`（工作树）
-3. **选择 TDD 模式** — `tdd` / `direct`（直接实现）
-4. **选择审查模式** — `off`（关闭） / `standard`（标准） / `thorough`（全面）
-5. **加载计划编写技能** — 子代理卸载创建实现计划
-6. **逐任务实现** — 按 TDD 模式或子代理调度逐项实现
-7. **代码审查** — review_mode 非 off 时执行审查
-8. **逐任务提交** — 按任务粒度提交代码
-9. **守卫验证** — 验证所有任务完成 + 审查通过，执行 `guard --apply build-complete`
+测试或构建失败时遵循 `debug-gate.md`。不得仅凭代理报告判定完成，必须检查工作树并实际运行验证。
+全部 `required_output` 齐全后，分别执行
+`smart run evidence <change-name> <artifact-id> <evidence-value>` 登记证据，然后推进：
 
-## 产物
+```bash
+smart run advance <change-name> --stage build
+```
 
-| 产物 | 说明 |
-|------|------|
-| 实现计划 | 子代理生成的计划文档 |
-| 代码提交 | 逐任务的 Git 提交 |
-| `.smart.yaml` | Smart 状态文件（phase=build）|
-
-## 守卫条件
-
-`build-complete` 转换要求：
-- `build_mode` 已选择
-- `isolation` 已选择
-- 所有任务完成并勾选
-- 审查通过（review_mode 非 off 时）
-
-## 执行模式
-
-| 模式 | 说明 |
-|------|------|
-| `subagent-driven-development` | 子代理驱动开发，每任务使用独立子代理 |
-| `executing-plans` | 按预定义计划执行 |
-| `direct` | 直接实现，不经过子代理 |
-
-## 用户决策点
-
-1. 构建模式选择
-2. 隔离模式选择
-3. 审查模式选择
-
-## 下一阶段
-
-守卫通过后，自动进入 `/smart-verify`（Verify 阶段）。
-
-## 参考
-
-- `smart/reference/subagent-dispatch.md`
-- `smart/reference/dirty-worktree.md`
-- `smart/reference/smart-yaml-fields.md`
-- `smart/reference/debug-gate.md`
-
-## 环境变量
-
-参见 `smart` 技能。
+范围超过 bugfix/quick 时，确认后执行 `smart run switch <change-name> official/full --confirmed`。

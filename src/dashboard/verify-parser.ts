@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileExists } from '../utils/file-system.js';
-import type { VerificationSummary, VerificationItem } from './types.js';
+import type { VerificationSummary, VerificationItem } from '../project/types.js';
 
 export async function readVerification(changeDir: string): Promise<VerificationSummary | null> {
   const reportPath = path.join(changeDir, 'verification_report.md');
@@ -34,8 +34,8 @@ export function parseVerification(content: string, reportPath: string): Verifica
   }
 
   if (result === 'unknown') {
-    const allPassed = items.length > 0 && items.every(i => i.passed);
-    result = allPassed ? 'pass' : items.some(i => i.passed) ? 'partial' : 'fail';
+    const allPassed = items.length > 0 && items.every((i) => i.passed);
+    result = allPassed ? 'pass' : items.some((i) => i.passed) ? 'partial' : 'fail';
   }
 
   return { result, reportPath, items };

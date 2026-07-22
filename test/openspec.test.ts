@@ -30,8 +30,24 @@ vi.mock('child_process', () => ({
 }));
 
 import { execFileSync } from 'child_process';
-import { existsSync, writeFileSync, copyFileSync, unlinkSync, readdirSync, rmdirSync, cpSync, rmSync, mkdirSync, mkdtempSync } from 'fs';
-import { getNpmExecutable, buildOpenSpecInitInvocation, isCommandAvailable, installOpenSpec } from '../src/core/openspec.js';
+import {
+  existsSync,
+  writeFileSync,
+  copyFileSync,
+  unlinkSync,
+  readdirSync,
+  rmdirSync,
+  cpSync,
+  rmSync,
+  mkdirSync,
+  mkdtempSync,
+} from 'fs';
+import {
+  getNpmExecutable,
+  buildOpenSpecInitInvocation,
+  isCommandAvailable,
+  installOpenSpec,
+} from '../src/core/openspec.js';
 import type { InstallScope } from '../src/core/types.js';
 
 describe('openspec', () => {
@@ -69,7 +85,13 @@ describe('openspec', () => {
     });
 
     it('omits profile flag when includeProfileFlag is false', () => {
-      const result = buildOpenSpecInitInvocation('/project', toolIds, 'project', '/home/user', false);
+      const result = buildOpenSpecInitInvocation(
+        '/project',
+        toolIds,
+        'project',
+        '/home/user',
+        false,
+      );
       expect(result.args).not.toContain('--profile');
     });
   });
@@ -82,20 +104,26 @@ describe('openspec', () => {
     });
 
     it('returns false when command not found', () => {
-      vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
       expect(isCommandAvailable('openspec')).toBe(false);
     });
   });
 
   describe('installOpenSpec', () => {
     it('returns skipped when shouldInstallCli is false and CLI missing', async () => {
-      vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
       const result = await installOpenSpec('/project', ['claude'], 'project', false);
       expect(result).toBe('skipped');
     });
 
     it('returns failed when CLI install fails', async () => {
-      vi.mocked(execFileSync).mockImplementation(() => { throw new Error('not found'); });
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
       vi.mocked(mkdtempSync).mockReturnValue('/tmp/smart-openspec-profile-xxx');
       vi.mocked(existsSync).mockReturnValue(false);
       vi.mocked(rmSync).mockImplementation(() => undefined);
@@ -105,10 +133,12 @@ describe('openspec', () => {
     });
   });
 
-  it('validates all PLATFORMS have openspecToolId', async () => {
+  it('keeps OpenSpec tool mappings in the integration catalog', async () => {
     const { PLATFORMS } = await import('../src/core/platforms.js');
+    const { OPENSPEC_TOOL_IDS } = await import('../src/integrations/catalog.js');
     for (const p of PLATFORMS) {
-      expect(p.openspecToolId).toBeTruthy();
+      expect(OPENSPEC_TOOL_IDS[p.id]).toBeTruthy();
+      expect(p).not.toHaveProperty('openspecToolId');
     }
   });
 });

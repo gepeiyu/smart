@@ -1,70 +1,36 @@
 ---
 name: smart-issue
-description: "Smart Issue — Phase 1 of the Smart workflow. Initializes new changes: creates OpenSpec artifacts (proposal.md, design.md, tasks.md) and the .smart.yaml state file. Invoked by /smart-issue."
+description: "Smart Issue stage adapter. Executes the resolved requirements contract and initializes traceable artifacts."
 ---
 
-# Smart Issue — Phase 1: Open
+# Smart Issue Stage
 
-**Phase Owner**: OpenSpec
+Read `smart/reference/workflow-runtime.md`. Continue only when the run's `currentStage` is `issue`.
 
-## Entry Conditions
+## Execute
 
-- No active change exists, or user explicitly chose to create a new change
-- Invoked via `/smart-issue` from the main `/smart` dispatcher
+1. Clarify the request, constraints, acceptance criteria, and non-goals.
+2. If the request should be split, present the split and wait for explicit approval.
+3. Read the resolved `issue` stage and verify its required inputs.
+4. Dispatch its declared owner/executors.
 
-## Steps
+For `openspec.issue.instruction-driven.v1`, use the installed OpenSpec adapter to create the native
+change and produce the declared proposal, specification delta, and task list. Preserve OpenSpec's
+native paths and metadata. Do not emulate OpenSpec when the adapter is unavailable; block the run
+with the concrete reason.
 
-### Step 1: Clarify Requirements
+For another registered contract, follow that adapter and require the same declared output contract.
 
-1. Ask the user what they want to build or change. Ask clarifying questions until the scope is clear.
-2. If the request is large enough to warrant splitting, present a split proposal and wait for user confirmation (decision point).
+## Complete
 
-### Step 2: Initialize Change
-
-1. Run `/opsx:new <name>` to create the OpenSpec change directory
-2. This creates `openspec/changes/<name>/` with OpenSpec-owned artifacts:
-   - `.openspec.yaml`
-   - proposal.md
-   - design.md (high-level architecture decisions)
-   - tasks.md
-3. Run Smart state initialization so `smartdocs/changes/<name>/.smart.yaml` exists with `phase: issue` and `workflow: full`:
-   ```bash
-   "$SMART_BASH" "$SMART_STATE" init <change-name>
-   ```
-
-### Step 3: Create Artifacts
-
-Before writing artifacts, read `.smart/config.yaml` if it exists and use `smart_language` as the artifact language (`zh` = Chinese, `en` = English). If it is missing, use the language of the user request that triggered the workflow.
-
-1. Write `proposal.md` — Why and What
-2. Write `design.md` — High-level architecture decisions
-3. Write `tasks.md` — Task checklist
-4. Present the three artifacts to the user for review and confirmation (decision point)
-
-### Step 4: Guard and Advance
-
-1. Run guard:
-   ```bash
-   "$SMART_BASH" "$SMART_GUARD" <change-name> issue --apply
-   ```
-2. Resolve next action:
-   ```bash
-   "$SMART_BASH" "$SMART_STATE" next <change-name>
-   ```
-
-## Script Location
+Show the resulting artifacts to the user when review is required. Validate every `required_output`,
+then advance exactly once:
 
 ```bash
-SMART_ENV="${SMART_ENV:-$(find . "$HOME"/.*/skills "$HOME/.config" "$HOME/.gemini" -path '*/smart/scripts/smart-env.sh' -type f -print -quit 2>/dev/null)}"
-if [ -z "$SMART_ENV" ]; then
-  echo "ERROR: smart-env.sh not found. Ensure the smart skill is installed." >&2
-  return 1
-fi
-. "$SMART_ENV"
-
-if [ -z "$SMART_GUARD" ] || [ -z "$SMART_STATE" ] || [ -z "$SMART_HANDOFF" ]; then
-  echo "ERROR: Smart scripts not found. Ensure the smart skill is installed." >&2
-  echo "Expected path pattern: */smart/scripts/smart-*.sh under project or platform skill directories" >&2
-  return 1
-fi
+smart run advance <change-name> --stage issue
 ```
+
+Do not advance on missing artifacts or implicit approval. Use `smart run block` for an integration
+failure. Output language follows `.smart/config.yaml` and existing artifact language.
+
+References: `smart/reference/decision-point.md`, `smart/reference/workflow-runtime.md`.

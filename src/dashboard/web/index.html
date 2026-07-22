@@ -1,118 +1,999 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Dashboard</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 2rem; }
-h1 { color: #58a6ff; margin-bottom: 0.5rem; }
-h2 { color: #8b949e; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.5rem; }
-.meta { color: #8b949e; font-size: 0.85rem; margin-bottom: 1.5rem; }
-.stats { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-.stat { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; flex: 1; }
-.stat-value { font-size: 1.5rem; font-weight: 600; color: #58a6ff; }
-.stat-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
-.change { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; }
-.change-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-.change-name { font-weight: 600; color: #c9d1d9; }
-.badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
-.badge-issue { background: #1f6feb; color: #fff; }
-.badge-design { background: #8957e5; color: #fff; }
-.badge-build { background: #d29922; color: #fff; }
-.badge-verify { background: #f0883e; color: #fff; }
-.badge-archive { background: #3fb950; color: #fff; }
-.badge-unknown { background: #30363d; color: #8b949e; }
-.badge-fail { background: #da3633; color: #fff; }
-.badge-pass { background: #3fb950; color: #fff; }
-.change-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #8b949e; }
-.error { color: #da3633; }
-.warning { color: #d29922; }
-.info { color: #58a6ff; }
-.risk-list { margin-top: 0.5rem; }
-.risk-item { font-size: 0.85rem; padding: 0.2rem 0; }
-.next { margin-top: 0.5rem; padding: 0.5rem; background: #0d1117; border-radius: 4px; font-family: monospace; font-size: 0.85rem; }
-.git { margin-top: 1rem; padding: 1rem; background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
-.git-row { display: flex; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.85rem; }
-.loading { color: #8b949e; font-style: italic; }
-</style>
-</head>
-<body>
-<h1>Smart Dashboard</h1>
-<div class="meta" id="meta"></div>
-<div class="stats" id="stats"></div>
-<h2>Active Changes</h2>
-<div id="active-changes"><p class="loading">Loading...</p></div>
-<h2>Archived Changes</h2>
-<div id="archived-changes"><p class="loading">Loading...</p></div>
-<h2>Git Status</h2>
-<div class="git" id="git-status"><p class="loading">Loading...</p></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Dashboard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f5f6f7;
+        --surface: #ffffff;
+        --surface-muted: #f0f2f3;
+        --ink: #1b1f23;
+        --muted: #687078;
+        --line: #d9dde1;
+        --accent: #087f8c;
+        --accent-soft: #dff3f4;
+        --good: #247447;
+        --good-soft: #e1f3e8;
+        --warn: #9a6700;
+        --warn-soft: #fff0c2;
+        --bad: #b42318;
+        --bad-soft: #fee4e2;
+        --neutral: #56616b;
+        --shadow: 0 1px 2px rgb(0 0 0 / 5%);
+      }
 
-<script>
-async function load() {
-  try {
-    const res = await fetch('/api/dashboard');
-    const data = await res.json();
-    render(data);
-  } catch (e) {
-    document.getElementById('active-changes').innerHTML = '<p class="error">Failed to load dashboard data.</p>';
-  }
-}
+      * {
+        box-sizing: border-box;
+      }
 
-function render(data) {
-  const verifyFailed = data.changes.filter(c => c.verifyResult === 'fail').length;
-  const dirtyFiles = data.git?.dirtyFiles?.length || 0;
-  document.getElementById('meta').textContent = `Project: ${data.projectPath}  |  Generated: ${new Date(data.generatedAt).toLocaleString()}`;
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="stat-value">${data.changes.length}</div><div class="stat-label">Active Changes</div></div>
-    <div class="stat"><div class="stat-value">${data.archived.length}</div><div class="stat-label">Archived</div></div>
-    <div class="stat"><div class="stat-value">${verifyFailed}</div><div class="stat-label">Verify Failed</div></div>
-    <div class="stat"><div class="stat-value">${dirtyFiles}</div><div class="stat-label">Dirty Files</div></div>
-  `;
+      html,
+      body {
+        width: 100%;
+        max-width: 100%;
+      }
 
-  document.getElementById('active-changes').innerHTML = data.changes.length === 0
-    ? '<p class="loading">No active changes.</p>'
-    : data.changes.map(renderChange).join('');
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 14px;
+        letter-spacing: 0;
+      }
 
-  document.getElementById('archived-changes').innerHTML = data.archived.length === 0
-    ? '<p class="loading">No archived changes.</p>'
-    : data.archived.map(renderChange).join('');
+      button {
+        font: inherit;
+      }
 
-  const git = data.git;
-  document.getElementById('git-status').innerHTML = git ? `
-    <div class="git-row"><strong>Branch:</strong> ${git.branch || 'N/A'}</div>
-    <div class="git-row"><strong>HEAD:</strong> ${git.headShort || git.head || 'N/A'}</div>
-    <div class="git-row"><strong>Dirty files:</strong> ${dirtyFiles}</div>
-    ${git.recentCommits.length > 0 ? '<div class="git-row"><strong>Recent commits:</strong></div>' + git.recentCommits.map(c => '<div class="git-row" style="font-family:monospace;font-size:0.8rem;color:#8b949e;">' + c.hashShort + ' ' + c.message + '</div>').join('') : ''}
-  ` : '<p class="loading">Git information unavailable.</p>';
-}
+      .topbar {
+        position: sticky;
+        z-index: 10;
+        top: 0;
+        display: flex;
+        min-height: 58px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        border-bottom: 1px solid var(--line);
+        background: rgb(255 255 255 / 96%);
+        padding: 9px 24px;
+      }
 
-function renderChange(c) {
-  const phaseBadge = `badge-${c.phase}`;
-  const verifyResult = c.verification?.result || c.verifyResult;
-  const verifyBadge = verifyResult === 'fail' ? 'badge-fail' : verifyResult === 'pass' ? 'badge-pass' : '';
-  const taskText = c.tasks ? `${c.tasks.completed}/${c.tasks.total}` : 'N/A';
-  return `<div class="change">
-    <div class="change-header">
-      <span class="change-name">${c.name}</span>
-      <span>
-        <span class="badge ${phaseBadge}">${c.phase}</span>
-        ${c.workflow ? `<span class="badge badge-unknown">${c.workflow}</span>` : ''}
-        ${verifyBadge ? `<span class="badge ${verifyBadge}">${verifyResult}</span>` : ''}
-      </span>
-    </div>
-    <div class="change-meta">
-      <span>Tasks: ${taskText}</span>
-      <span>Auto transition: ${c.autoTransition ? 'on' : 'off'}</span>
-    </div>
-    ${c.risks.length > 0 ? `<div class="risk-list">${c.risks.map(r => `<div class="risk-item warning">${r}</div>`).join('')}</div>` : ''}
-    ${c.nextAction ? `<div class="next">→ /${c.nextAction}</div>` : ''}
-  </div>`;
-}
+      .identity {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
 
-load();
-setInterval(load, 30000);
-</script>
-</body>
+      .brand {
+        color: var(--accent);
+        font-size: 17px;
+        font-weight: 750;
+      }
+
+      .project {
+        overflow: hidden;
+        margin-top: 2px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .toolbar {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .updated {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .icon-button {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .icon-button:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .icon-button.loading {
+        cursor: wait;
+        opacity: 0.6;
+      }
+
+      .language-select {
+        width: 104px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--ink);
+        cursor: pointer;
+        padding: 0 8px;
+        font: inherit;
+        font-size: 12px;
+      }
+
+      .language-select:hover,
+      .language-select:focus-visible {
+        border-color: var(--accent);
+        outline: 0;
+      }
+
+      .health,
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .pill {
+        justify-self: start;
+      }
+
+      .tone-healthy,
+      .tone-active,
+      .tone-pass,
+      .tone-ready {
+        background: var(--good-soft);
+        color: var(--good);
+      }
+
+      .tone-attention,
+      .tone-warn,
+      .tone-missing,
+      .tone-untrusted,
+      .tone-unsupported {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .tone-blocked,
+      .tone-fail,
+      .tone-invalid {
+        background: var(--bad-soft);
+        color: var(--bad);
+      }
+
+      .tone-uninitialized,
+      .tone-completed,
+      .tone-skip,
+      .tone-not-checked {
+        background: var(--surface-muted);
+        color: var(--neutral);
+      }
+
+      main {
+        width: min(1480px, 100%);
+        margin: 0 auto;
+        padding: 20px 24px 48px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .metric {
+        min-width: 0;
+        border-right: 1px solid var(--line);
+        padding: 14px 16px;
+      }
+
+      .metric:last-child {
+        border-right: 0;
+      }
+
+      .metric-value {
+        font-size: 23px;
+        font-weight: 720;
+      }
+
+      .metric-label {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .column {
+        min-width: 0;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .section-header {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 7px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 720;
+      }
+
+      .count {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .panel {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .segment {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+        padding: 2px;
+      }
+
+      .segment button {
+        border: 0;
+        border-radius: 3px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .segment button.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        overflow-wrap: anywhere;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        background: var(--surface-muted);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .run-name {
+        font-weight: 680;
+      }
+
+      .run-meta,
+      .subtle {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      code {
+        color: #3f4850;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
+
+      .progress {
+        width: 100%;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: #e8ebed;
+      }
+
+      .progress span {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+      }
+
+      .details {
+        display: grid;
+        grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+        gap: 9px 14px;
+        padding: 14px;
+      }
+
+      .details dt {
+        color: var(--muted);
+      }
+
+      .details dd {
+        min-width: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .diagnostic {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px;
+        border-bottom: 1px solid var(--line);
+        padding: 11px 12px;
+      }
+
+      .diagnostic:last-child {
+        border-bottom: 0;
+      }
+
+      .diagnostic-title {
+        font-weight: 650;
+      }
+
+      .diagnostic-message {
+        margin-top: 2px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .diagnostic-next {
+        margin-top: 5px;
+        color: var(--accent);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
+
+      .empty,
+      .error-state {
+        padding: 22px 14px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .error-state {
+        color: var(--bad);
+      }
+
+      @media (max-width: 900px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .metric:nth-child(2) {
+          border-right: 0;
+        }
+
+        .metric:nth-child(-n + 2) {
+          border-bottom: 1px solid var(--line);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .topbar {
+          display: block;
+          padding: 9px 12px;
+        }
+
+        .identity {
+          width: calc(100% - 226px);
+        }
+
+        .toolbar {
+          position: fixed;
+          z-index: 20;
+          top: 9px;
+          right: 12px;
+          gap: 6px;
+        }
+
+        .updated {
+          display: none;
+        }
+
+        main {
+          padding: 14px 12px 36px;
+        }
+
+        .section-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        table,
+        tbody,
+        tr,
+        td {
+          display: block;
+          width: 100%;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tr {
+          border-bottom: 1px solid var(--line);
+          padding: 8px 0;
+        }
+
+        tr:last-child {
+          border-bottom: 0;
+        }
+
+        td {
+          display: grid;
+          grid-template-columns: 92px minmax(0, 1fr);
+          border: 0;
+          padding: 5px 12px;
+        }
+
+        td::before {
+          color: var(--muted);
+          content: attr(data-label);
+          font-size: 11px;
+          font-weight: 650;
+          text-transform: uppercase;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="identity">
+        <div class="brand">Smart</div>
+        <div class="project" id="project">Loading...</div>
+      </div>
+      <div class="toolbar">
+        <span class="updated" id="updated"></span>
+        <select class="language-select" id="language-switch" title="Language" aria-label="Language">
+          <option value="auto">Follow project</option>
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+        <button class="icon-button" id="refresh" type="button" title="Refresh" aria-label="Refresh">
+          ↻
+        </button>
+        <span class="health tone-uninitialized" id="health">Loading</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="metrics" id="metrics" aria-label="Project summary"></section>
+      <div class="workspace">
+        <div class="column">
+          <section class="section">
+            <div class="section-header">
+              <h2 data-i18n="workflowRuns">Workflow runs</h2>
+              <div class="segment" id="run-filter" aria-label="Filter workflow runs">
+                <button class="active" type="button" data-filter="current" data-i18n="current">
+                  Current
+                </button>
+                <button type="button" data-filter="active" data-i18n="active">Active</button>
+                <button type="button" data-filter="blocked" data-i18n="blocked">Blocked</button>
+                <button type="button" data-filter="all" data-i18n="all">All</button>
+              </div>
+            </div>
+            <div class="panel" id="runs"></div>
+          </section>
+
+          <section class="section">
+            <div class="section-header">
+              <h2 data-i18n="integrations">Integrations</h2>
+              <span class="count" id="integration-count"></span>
+            </div>
+            <div class="panel" id="integrations"></div>
+          </section>
+
+          <section class="section">
+            <div class="section-header"><h2 data-i18n="git">Git</h2></div>
+            <div class="panel" id="git"></div>
+          </section>
+        </div>
+
+        <aside class="column">
+          <section class="section">
+            <div class="section-header"><h2 data-i18n="workflow">Workflow</h2></div>
+            <div class="panel" id="workflow"></div>
+          </section>
+
+          <section class="section">
+            <div class="section-header">
+              <h2 data-i18n="diagnostics">Diagnostics</h2>
+              <span class="count" id="diagnostic-count"></span>
+            </div>
+            <div class="panel" id="diagnostics"></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const translations = {
+        en: {
+          title: 'Smart Dashboard',
+          refresh: 'Refresh snapshot',
+          language: 'Display language',
+          followProject: 'Follow project',
+          projectSummary: 'Project summary',
+          filterRuns: 'Filter workflow runs',
+          workflowRuns: 'Workflow runs',
+          current: 'Current',
+          active: 'Active',
+          blocked: 'Blocked',
+          completed: 'Completed',
+          invalid: 'Invalid',
+          all: 'All',
+          issues: 'Issues',
+          integrations: 'Integrations',
+          integration: 'Integration',
+          git: 'Git',
+          workflow: 'Workflow',
+          diagnostics: 'Diagnostics',
+          noRuns: 'No runs in this view',
+          change: 'Change',
+          state: 'State',
+          stage: 'Stage',
+          progress: 'Progress',
+          next: 'Next',
+          unknownWorkflow: 'unknown workflow',
+          done: 'done',
+          source: 'Source',
+          support: 'Support',
+          digest: 'Digest',
+          notConfigured: 'Not configured',
+          drifted: 'Drifted',
+          valid: 'Valid',
+          resolved: '{count} resolved',
+          noIntegrations: 'No integrations resolved',
+          management: 'Management',
+          actionable: '{count} actionable',
+          noDiagnostics: 'No actionable diagnostics',
+          snapshotFailed: 'Snapshot request failed',
+          gitUnavailable: 'Git information unavailable',
+          branch: 'Branch',
+          workingTree: 'Working tree',
+          changedFiles: '{count} changed files',
+          clean: 'Clean',
+          offline: 'Offline',
+          official: 'Official',
+          local: 'Local',
+          smart: 'Smart',
+          user: 'User',
+          healthy: 'Healthy',
+          attention: 'Attention',
+          uninitialized: 'Not initialized',
+          pass: 'Pass',
+          warn: 'Warn',
+          fail: 'Fail',
+          skip: 'Skip',
+          ready: 'Ready',
+          missing: 'Missing',
+          untrusted: 'Untrusted',
+          unsupported: 'Unsupported',
+          'not-checked': 'Not checked',
+        },
+        zh: {
+          title: 'Smart 仪表盘',
+          refresh: '刷新项目快照',
+          language: '显示语言',
+          followProject: '跟随项目',
+          projectSummary: '项目摘要',
+          filterRuns: '筛选工作流运行',
+          workflowRuns: '工作流运行',
+          current: '当前',
+          active: '进行中',
+          blocked: '已阻断',
+          completed: '已完成',
+          invalid: '无效',
+          all: '全部',
+          issues: '问题',
+          integrations: '集成',
+          integration: '集成',
+          git: 'Git',
+          workflow: '工作流',
+          diagnostics: '诊断',
+          noRuns: '当前视图中没有运行',
+          change: '变更',
+          state: '状态',
+          stage: '阶段',
+          progress: '进度',
+          next: '下一步',
+          unknownWorkflow: '未知工作流',
+          done: '完成',
+          source: '来源',
+          support: '支持等级',
+          digest: '摘要',
+          notConfigured: '未配置',
+          drifted: '已漂移',
+          valid: '有效',
+          resolved: '已解析 {count} 个',
+          noIntegrations: '未解析到集成',
+          management: '管理方式',
+          actionable: '{count} 项待处理',
+          noDiagnostics: '没有待处理的诊断',
+          snapshotFailed: '项目快照请求失败',
+          gitUnavailable: 'Git 信息不可用',
+          branch: '分支',
+          workingTree: '工作区',
+          changedFiles: '{count} 个文件有改动',
+          clean: '干净',
+          offline: '离线',
+          official: '官方',
+          local: '本地',
+          smart: 'Smart 管理',
+          user: '用户管理',
+          healthy: '健康',
+          attention: '需关注',
+          uninitialized: '未初始化',
+          pass: '通过',
+          warn: '警告',
+          fail: '失败',
+          skip: '跳过',
+          ready: '就绪',
+          missing: '缺失',
+          untrusted: '未信任',
+          unsupported: '不支持',
+          'not-checked': '未检查',
+        },
+      };
+      const state = {
+        snapshot: null,
+        filter: 'current',
+        language: 'en',
+        languageOverride: null,
+      };
+      const byId = (id) => document.getElementById(id);
+
+      function t(key, values = {}) {
+        const dictionary = translations[state.language] ?? translations.en;
+        let message = dictionary[key] ?? translations.en[key] ?? key;
+        Object.entries(values).forEach(([name, value]) => {
+          message = message.replaceAll(`{${name}}`, String(value));
+        });
+        return message;
+      }
+
+      function applyLanguage(language) {
+        state.language = language === 'zh' ? 'zh' : 'en';
+        document.documentElement.lang = state.language === 'zh' ? 'zh-CN' : 'en';
+        document.title = t('title');
+        document.querySelectorAll('[data-i18n]').forEach((node) => {
+          node.textContent = t(node.dataset.i18n);
+        });
+        byId('metrics').setAttribute('aria-label', t('projectSummary'));
+        byId('run-filter').setAttribute('aria-label', t('filterRuns'));
+        byId('refresh').title = t('refresh');
+        byId('refresh').setAttribute('aria-label', t('refresh'));
+        const languageSwitch = byId('language-switch');
+        languageSwitch.title = t('language');
+        languageSwitch.setAttribute('aria-label', t('language'));
+        languageSwitch.querySelector('option[value="auto"]').textContent = t('followProject');
+        languageSwitch.value = state.languageOverride ?? 'auto';
+      }
+
+      function element(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = String(text);
+        return node;
+      }
+
+      function pill(value) {
+        return element('span', `pill tone-${value}`, t(value));
+      }
+
+      function empty(message) {
+        return element('div', 'empty', message);
+      }
+
+      function renderMetrics(snapshot) {
+        const metrics = [
+          [t('active'), snapshot.summary.active],
+          [t('blocked'), snapshot.summary.blocked],
+          [t('completed'), snapshot.summary.completed],
+          [t('issues'), snapshot.summary.failures + snapshot.summary.warnings],
+        ];
+        byId('metrics').replaceChildren(
+          ...metrics.map(([label, value]) => {
+            const item = element('div', 'metric');
+            item.append(
+              element('div', 'metric-value', value),
+              element('div', 'metric-label', label),
+            );
+            return item;
+          }),
+        );
+      }
+
+      function filteredRuns() {
+        const runs = state.snapshot?.runs ?? [];
+        if (state.filter === 'all') return runs;
+        if (state.filter === 'current') return runs.filter((run) => run.status !== 'completed');
+        return runs.filter((run) => run.status === state.filter);
+      }
+
+      function tableCell(label, content) {
+        const cell = element('td');
+        cell.dataset.label = label;
+        if (content instanceof Node) cell.append(content);
+        else cell.textContent = content ?? '-';
+        return cell;
+      }
+
+      function renderRuns() {
+        const runs = filteredRuns();
+        if (runs.length === 0) {
+          byId('runs').replaceChildren(empty(t('noRuns')));
+          return;
+        }
+        const table = element('table');
+        const head = element('thead');
+        const headRow = element('tr');
+        [t('change'), t('state'), t('stage'), t('progress'), t('next')].forEach((label) =>
+          headRow.append(element('th', '', label)),
+        );
+        head.append(headRow);
+        const body = element('tbody');
+        runs.forEach((run) => {
+          const row = element('tr');
+          const identity = element('div');
+          identity.append(element('div', 'run-name', run.name));
+          identity.append(
+            element(
+              'div',
+              'run-meta',
+              `${run.route ?? '-'} · ${run.workflowSource ?? t('unknownWorkflow')}`,
+            ),
+          );
+          const progress = element('div');
+          const bar = element('div', 'progress');
+          const fill = element('span');
+          fill.style.width = `${run.progressPercent ?? 0}%`;
+          bar.append(fill);
+          progress.append(
+            bar,
+            element(
+              'div',
+              'subtle',
+              run.progressPercent === null ? '-' : `${run.progressPercent}%`,
+            ),
+          );
+          const next = element('div');
+          if (run.nextAction) {
+            next.append(element('code', '', run.nextAction.command));
+            if (run.failure) next.append(element('div', 'subtle', run.failure));
+          } else {
+            next.textContent = '-';
+          }
+          row.append(
+            tableCell(t('change'), identity),
+            tableCell(t('state'), pill(run.status)),
+            tableCell(
+              t('stage'),
+              run.currentStage ?? (run.status === 'completed' ? t('done') : '-'),
+            ),
+            tableCell(t('progress'), progress),
+            tableCell(t('next'), next),
+          );
+          body.append(row);
+        });
+        table.append(head, body);
+        byId('runs').replaceChildren(table);
+      }
+
+      function renderWorkflow(snapshot) {
+        const workflow = snapshot.workflow;
+        const details = element('dl', 'details');
+        const rows = [
+          [t('source'), workflow.source ?? t('notConfigured')],
+          [t('support'), workflow.supportLevel ?? '-'],
+          [
+            t('state'),
+            workflow.drifted ? t('drifted') : workflow.valid ? t('valid') : t('invalid'),
+          ],
+          [t('digest'), workflow.resolvedDigest?.slice(0, 12) ?? '-'],
+        ];
+        rows.forEach(([term, value]) => {
+          details.append(element('dt', '', term), element('dd', '', value));
+        });
+        byId('workflow').replaceChildren(details);
+      }
+
+      function renderIntegrations(snapshot) {
+        byId('integration-count').textContent = t('resolved', {
+          count: snapshot.integrations.length,
+        });
+        if (snapshot.integrations.length === 0) {
+          byId('integrations').replaceChildren(empty(t('noIntegrations')));
+          return;
+        }
+        const table = element('table');
+        const head = element('thead');
+        const headRow = element('tr');
+        [t('integration'), t('state'), t('source'), t('management')].forEach((label) =>
+          headRow.append(element('th', '', label)),
+        );
+        head.append(headRow);
+        const body = element('tbody');
+        snapshot.integrations.forEach((integration) => {
+          const row = element('tr');
+          const name = element('div');
+          name.append(
+            element('div', 'run-name', integration.displayName),
+            element('div', 'subtle', integration.message),
+          );
+          row.append(
+            tableCell(t('integration'), name),
+            tableCell(t('state'), pill(integration.status)),
+            tableCell(t('source'), t(integration.source)),
+            tableCell(t('management'), t(integration.management)),
+          );
+          body.append(row);
+        });
+        table.append(head, body);
+        byId('integrations').replaceChildren(table);
+      }
+
+      function renderDiagnostics(snapshot) {
+        const checks = snapshot.diagnostics.filter(
+          (item) => item.status === 'fail' || item.status === 'warn',
+        );
+        byId('diagnostic-count').textContent = t('actionable', { count: checks.length });
+        if (checks.length === 0) {
+          byId('diagnostics').replaceChildren(empty(t('noDiagnostics')));
+          return;
+        }
+        byId('diagnostics').replaceChildren(
+          ...checks.map((check) => {
+            const row = element('div', 'diagnostic');
+            const content = element('div');
+            content.append(element('div', 'diagnostic-title', check.title));
+            content.append(element('div', 'diagnostic-message', check.message));
+            if (check.remediation)
+              content.append(element('div', 'diagnostic-next', check.remediation));
+            row.append(pill(check.status), content);
+            return row;
+          }),
+        );
+      }
+
+      function renderGit(snapshot) {
+        if (!snapshot.git) {
+          byId('git').replaceChildren(empty(t('gitUnavailable')));
+          return;
+        }
+        const details = element('dl', 'details');
+        const rows = [
+          [t('branch'), snapshot.git.branch],
+          ['HEAD', snapshot.git.headShort],
+          [
+            t('workingTree'),
+            snapshot.git.dirty
+              ? t('changedFiles', { count: snapshot.git.dirtyFiles.length })
+              : t('clean'),
+          ],
+        ];
+        rows.forEach(([term, value]) =>
+          details.append(element('dt', '', term), element('dd', '', value)),
+        );
+        byId('git').replaceChildren(details);
+      }
+
+      function render(snapshot) {
+        state.snapshot = snapshot;
+        applyLanguage(snapshot.language);
+        byId('project').textContent = snapshot.projectPath;
+        byId('updated').textContent = new Date(snapshot.generatedAt).toLocaleTimeString();
+        const health = byId('health');
+        health.className = `health tone-${snapshot.health}`;
+        health.textContent = t(snapshot.health);
+        renderMetrics(snapshot);
+        renderRuns();
+        renderWorkflow(snapshot);
+        renderIntegrations(snapshot);
+        renderDiagnostics(snapshot);
+        renderGit(snapshot);
+      }
+
+      async function load() {
+        const refresh = byId('refresh');
+        refresh.classList.add('loading');
+        refresh.disabled = true;
+        try {
+          const query = state.languageOverride ? `?lang=${state.languageOverride}` : '';
+          const response = await fetch(`/api/snapshot${query}`, { cache: 'no-store' });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || t('snapshotFailed'));
+          render(payload);
+        } catch (error) {
+          byId('runs').replaceChildren(element('div', 'error-state', error.message));
+          const health = byId('health');
+          health.className = 'health tone-blocked';
+          health.textContent = t('offline');
+        } finally {
+          refresh.classList.remove('loading');
+          refresh.disabled = false;
+        }
+      }
+
+      byId('refresh').addEventListener('click', load);
+      byId('language-switch').addEventListener('change', (event) => {
+        state.languageOverride = event.target.value === 'auto' ? null : event.target.value;
+        if (state.languageOverride) applyLanguage(state.languageOverride);
+        load();
+      });
+      byId('run-filter').addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-filter]');
+        if (!button) return;
+        state.filter = button.dataset.filter;
+        byId('run-filter')
+          .querySelectorAll('button')
+          .forEach((item) => item.classList.toggle('active', item === button));
+        renderRuns();
+      });
+
+      load();
+      setInterval(load, 30000);
+    </script>
+  </body>
 </html>

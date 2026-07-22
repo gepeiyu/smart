@@ -1,29 +1,57 @@
-import path from 'path';
 import os from 'os';
+import path from 'path';
 import { checkbox, select } from '@inquirer/prompts';
-import { platformSelectPrompt } from './platform-select-prompt.js';
-import { PLATFORMS, getPlatformSkillsDir, type Platform } from '../core/platforms.js';
-import { detectPlatforms, checkInstalledSkills, getBaseDir, type InstallScope } from '../core/detect.js';
+import { detectPlatforms, getBaseDir, hasSmartSkills, type InstallScope } from '../core/detect.js';
+import { PLATFORMS, type Platform } from '../core/platforms.js';
 import {
-  copySmartSkillsForPlatform, copySmartRulesForPlatform, installSmartHooksForPlatform, createWorkingDirs,
+  copySmartRulesForPlatform,
+  copySmartSkillsForPlatform,
+  createWorkingDirs,
+  installSmartHooksForPlatform,
   type LanguageConfig,
 } from '../core/skills.js';
-import { installOpenSpec, resolveOpenSpecCommand } from '../core/openspec.js';
-import { installSuperpowersForPlatforms } from '../core/superpowers.js';
-import { hasCodegraphProjectIndex, installCodegraph, resolveCodegraphCommand } from '../core/codegraph.js';
 import { printVersionInfo } from '../core/version.js';
+import { loadProjectIntegrationEnvironment } from '../integrations/environment.js';
+import {
+  type IntegrationDetection,
+  type IntegrationInstallStatus,
+  type IntegrationRuntime,
+} from '../integrations/runtime.js';
+import { listOfficialWorkflows } from '../workflows/catalog.js';
+import {
+  listProjectWorkflowDefinitions,
+  resolveProjectWorkflow,
+  setProjectWorkflow,
+} from '../workflows/store.js';
+import type { WorkflowResolution } from '../workflows/types.js';
 import { t, type TranslationKey } from './i18n.js';
+import { platformSelectPrompt } from './platform-select-prompt.js';
 
-type InitOptions = { yes?: boolean; skipExisting?: boolean; overwrite?: boolean; json?: boolean; scope?: InstallScope; language?: string; deps?: boolean };
-type InstallStatus = 'installed' | 'skipped' | 'failed';
+type InitOptions = {
+  yes?: boolean;
+  skipExisting?: boolean;
+  overwrite?: boolean;
+  json?: boolean;
+  scope?: InstallScope;
+  language?: string;
+  deps?: boolean;
+  preset?: string;
+  workflow?: string;
+};
 type ComponentAction = 'overwrite' | 'skip' | 'install';
 type BulkOverwriteChoice = 'overwrite-all' | 'skip-all' | 'choose';
 
 interface PlatformResult {
-  platform: Platform; openspec: InstallStatus; superpowers: InstallStatus; smart: InstallStatus; codegraph: InstallStatus;
+  platform: Platform;
+  smart: IntegrationInstallStatus;
+  integrations: Record<string, IntegrationInstallStatus>;
 }
 
-type ComponentPlan = { osAction: ComponentAction; spAction: ComponentAction; smAction: ComponentAction };
+interface PlatformPlan {
+  platform: Platform;
+  smartAction: ComponentAction;
+  integrationActions: Record<string, ComponentAction>;
+}
 
 const LANGUAGES: LanguageConfig[] = [
   { id: 'en', name: 'English', skillsDir: 'skills' },
@@ -33,23 +61,58 @@ const LANGUAGES: LanguageConfig[] = [
 async function selectScope(options: InitOptions, lang: string): Promise<InstallScope> {
   if (options.scope) return options.scope;
   if (options.yes) return 'project';
-  return select({ message: t(lang, 'installScope'), choices: [
-    { name: t(lang, 'scopeProject'), value: 'project' as const },
-    { name: t(lang, 'scopeGlobal'), value: 'global' as const },
-  ]});
+  return select({
+    message: t(lang, 'installScope'),
+    choices: [
+      { name: t(lang, 'scopeProject'), value: 'project' as const },
+      { name: t(lang, 'scopeGlobal'), value: 'global' as const },
+    ],
+  });
 }
 
 async function selectLanguage(options: InitOptions): Promise<LanguageConfig> {
-  if (options.language) return LANGUAGES.find((l) => l.id === options.language) ?? LANGUAGES[0];
+  if (options.language)
+    return LANGUAGES.find((language) => language.id === options.language) ?? LANGUAGES[0];
   if (options.yes) return LANGUAGES[0];
-  const langId = await select({ message: t('en', 'languagePrompt'), choices: LANGUAGES.map((lang) => ({ name: lang.name, value: lang.id })) });
-  return LANGUAGES.find((l) => l.id === langId) ?? LANGUAGES[0];
+  const languageId = await select({
+    message: t('en', 'languagePrompt'),
+    choices: LANGUAGES.map((language) => ({ name: language.name, value: language.id })),
+  });
+  return LANGUAGES.find((language) => language.id === languageId) ?? LANGUAGES[0];
 }
 
-async function selectPlatforms(detected: Set<string>, options: InitOptions, lang: string): Promise<string[]> {
-  const choices = PLATFORMS.map((p) => ({
-    name: `${p.name}${detected.has(p.id) ? ` (${t(lang, 'detected')})` : ''}`,
-    value: p.id, checked: detected.has(p.id),
+async function selectWorkflowReference(projectPath: string, options: InitOptions): Promise<string> {
+  if (options.preset && options.workflow) {
+    throw new Error('Use either --preset or --workflow, not both');
+  }
+  if (options.workflow) return options.workflow;
+  if (options.preset)
+    return options.preset.startsWith('official/') ? options.preset : `official/${options.preset}`;
+  if (options.yes) return 'official/full';
+
+  const officialChoices = listOfficialWorkflows().map((workflow) => ({
+    name: `${workflow.displayName ?? workflow.id} (official certified)`,
+    value: `official/${workflow.id}`,
+  }));
+  const projectChoices = (await listProjectWorkflowDefinitions(projectPath)).map((item) => ({
+    name: `${item.definition.displayName ?? item.definition.id} (custom)`,
+    value: item.source,
+  }));
+  return select({
+    message: 'Select workflow',
+    choices: [...officialChoices, ...projectChoices],
+  });
+}
+
+async function selectPlatforms(
+  detected: Set<string>,
+  options: InitOptions,
+  lang: string,
+): Promise<string[]> {
+  const choices = PLATFORMS.map((platform) => ({
+    name: `${platform.name}${detected.has(platform.id) ? ` (${t(lang, 'detected')})` : ''}`,
+    value: platform.id,
+    checked: detected.has(platform.id),
   }));
   if (options.yes) return [...detected];
   return platformSelectPrompt({
@@ -63,89 +126,189 @@ async function selectPlatforms(detected: Set<string>, options: InitOptions, lang
   });
 }
 
-async function promptOverwriteChoice(componentName: string, platformName: string, lang: string): Promise<'overwrite' | 'skip'> {
-  return select({ message: `${componentName} ${t(lang, 'alreadyExists')} ${platformName}. ${t(lang, 'overwriteChoice')}`, choices: [
-    { name: t(lang, 'overwrite'), value: 'overwrite' as const },
-    { name: t(lang, 'skip'), value: 'skip' as const },
-  ]});
-}
-
-async function promptBulkOverwriteChoice(platformName: string, components: string[], lang: string): Promise<BulkOverwriteChoice> {
-  return select({ message: `${platformName} ${t(lang, 'bulkOverwrite')} ${components.join(', ')}. ${t(lang, 'overwriteChoice')}`, choices: [
-    { name: t(lang, 'overwriteAll'), value: 'overwrite-all' as const },
-    { name: t(lang, 'skipAll'), value: 'skip-all' as const },
-    { name: t(lang, 'choosePer'), value: 'choose' as const },
-  ]});
-}
-
-function applyBulkOverwriteChoice<T extends ComponentPlan>(plan: T, choice: Exclude<BulkOverwriteChoice, 'choose'>, hasExisting?: { os?: boolean; sp?: boolean; sm?: boolean }): T {
-  const action = choice === 'overwrite-all' ? 'overwrite' : 'skip';
-  const shouldApply = (actionState: ComponentAction, exists?: boolean) => actionState === 'install' && (hasExisting === undefined || exists === true);
-  return { ...plan, osAction: shouldApply(plan.osAction, hasExisting?.os) ? action : plan.osAction, spAction: shouldApply(plan.spAction, hasExisting?.sp) ? action : plan.spAction, smAction: shouldApply(plan.smAction, hasExisting?.sm) ? action : plan.smAction };
-}
-
-function resolveAction(hasExisting: boolean, options: InitOptions): 'overwrite' | 'skip' | 'install' {
+function resolveAction(hasExisting: boolean, options: InitOptions): ComponentAction {
   if (!hasExisting) return 'install';
   if (options.overwrite) return 'overwrite';
-  if (options.skipExisting) return 'skip';
-  if (options.yes) return 'skip';
+  if (options.skipExisting || options.yes) return 'skip';
   return 'install';
 }
 
-type NpmDepId = 'openspec' | 'superpowers' | 'codegraph';
-interface NpmDepState { id: NpmDepId; installed: boolean; }
-
-async function selectNpmDeps(projectPath: string, spPlatformIds: string[], options: InitOptions, lang: string): Promise<Set<NpmDepId>> {
-  if (options.deps === false) return new Set();
-
-  const openSpecInstalled = resolveOpenSpecCommand(projectPath) !== null;
-  const codegraphInstalled = (await hasCodegraphProjectIndex(projectPath)) || resolveCodegraphCommand(projectPath) !== null;
-  const superpowersInstalled = spPlatformIds.length === 0;
-  const states: NpmDepState[] = [
-    { id: 'openspec', installed: openSpecInstalled },
-    { id: 'superpowers', installed: Boolean(superpowersInstalled) },
-    { id: 'codegraph', installed: codegraphInstalled },
-  ];
-  const depLabel: Record<NpmDepId, (installed: boolean) => string> = {
-    openspec: (installed) => installed ? t(lang, 'npmDepOpenSpecInstalled') : t(lang, 'npmDepOpenSpec'),
-    superpowers: (installed) => installed ? t(lang, 'npmDepSuperpowersInstalled') : t(lang, 'npmDepSuperpowers'),
-    codegraph: (installed) => installed ? t(lang, 'npmDepCodegraphInstalled') : t(lang, 'npmDepCodegraph'),
-  };
-  const depHint: Partial<Record<NpmDepId, string>> = { superpowers: t(lang, 'npmDepSuperpowersHint') };
-  const choices = states.map(({ id, installed }) => {
-    const choice: { name: string; value: NpmDepId; checked: boolean; description?: string } = {
-      name: depLabel[id](installed), value: id, checked: !installed,
-    };
-    if (depHint[id]) choice.description = depHint[id];
-    return choice;
+async function promptOverwriteChoice(
+  componentName: string,
+  platformName: string,
+  lang: string,
+): Promise<'overwrite' | 'skip'> {
+  return select({
+    message: `${componentName} ${t(lang, 'alreadyExists')} ${platformName}. ${t(lang, 'overwriteChoice')}`,
+    choices: [
+      { name: t(lang, 'overwrite'), value: 'overwrite' as const },
+      { name: t(lang, 'skip'), value: 'skip' as const },
+    ],
   });
-  if (options.yes) return new Set(states.filter((s) => !s.installed).map((s) => s.id));
-  const selected = await checkbox({ message: t(lang, 'selectNpmDeps'), choices });
-  return new Set(selected as NpmDepId[]);
 }
 
-function displaySummary(results: PlatformResult[], scope: InstallScope, lang: string): void {
-  const scopeLabel = scope === 'global' ? os.homedir() : 'project';
-  const componentStatuses: Array<[keyof Omit<PlatformResult, 'platform'>, string]> = [
-    ['openspec', 'OpenSpec'], ['superpowers', 'Superpowers'], ['smart', 'Smart'], ['codegraph', 'CodeGraph'],
-  ];
-  const hasFailure = (result: PlatformResult) => componentStatuses.some(([key]) => result[key] === 'failed');
-  const hasInstall = (result: PlatformResult) => componentStatuses.some(([key]) => result[key] === 'installed');
-  const failedDetails = (result: PlatformResult) => componentStatuses.filter(([key]) => result[key] === 'failed').map(([, label]) => `${label} ${t(lang, 'failedStatus')}`).join(', ');
+async function promptBulkOverwriteChoice(
+  platformName: string,
+  components: string[],
+  lang: string,
+): Promise<BulkOverwriteChoice> {
+  return select({
+    message: `${platformName} ${t(lang, 'bulkOverwrite')} ${components.join(', ')}. ${t(lang, 'overwriteChoice')}`,
+    choices: [
+      { name: t(lang, 'overwriteAll'), value: 'overwrite-all' as const },
+      { name: t(lang, 'skipAll'), value: 'skip-all' as const },
+      { name: t(lang, 'choosePer'), value: 'choose' as const },
+    ],
+  });
+}
 
-  console.log(`\n  ${t(lang, 'setupComplete')} (scope: ${scopeLabel})\n`);
-  const failed = results.filter(hasFailure);
-  const installed = results.filter((r) => !hasFailure(r) && hasInstall(r));
-  const skipped = results.filter((r) => componentStatuses.every(([key]) => r[key] === 'skipped'));
+function assertValidWorkflow(reference: string, resolution: WorkflowResolution): void {
+  if (resolution.valid) return;
+  const details = resolution.issues
+    .filter((issue) => issue.severity === 'error')
+    .map((issue) => `${issue.path}: ${issue.message}`)
+    .join('\n');
+  throw new Error(`Workflow ${reference} is invalid${details ? `:\n${details}` : ''}`);
+}
 
-  if (installed.length > 0) {
-    console.log(`  ${t(lang, 'installed')}`);
-    for (const r of installed) console.log(`    ${r.platform.name} -> ${getPlatformSkillsDir(r.platform, scope)}/skills/`);
+async function detectIntegrations(
+  runtimes: IntegrationRuntime[],
+  projectPath: string,
+  baseDir: string,
+  scope: InstallScope,
+  platformIds: string[],
+): Promise<Record<string, IntegrationDetection>> {
+  const entries = await Promise.all(
+    runtimes.map(
+      async (runtime) =>
+        [
+          runtime.manifest.id,
+          await runtime.detect({ projectPath, baseDir, scope, platformIds }),
+        ] as const,
+    ),
+  );
+  return Object.fromEntries(entries);
+}
+
+async function buildPlans(
+  platforms: Platform[],
+  runtimes: IntegrationRuntime[],
+  detections: Record<string, IntegrationDetection>,
+  baseDir: string,
+  scope: InstallScope,
+  options: InitOptions,
+  lang: string,
+): Promise<PlatformPlan[]> {
+  const plans: PlatformPlan[] = [];
+  for (const platform of platforms) {
+    const smartExists = await hasSmartSkills(platform, baseDir, scope);
+    let smartAction = resolveAction(smartExists, options);
+    const integrationActions = Object.fromEntries(
+      runtimes.map((runtime) => [
+        runtime.manifest.id,
+        resolveAction(
+          runtime.manifest.management === 'user'
+            ? false
+            : (detections[runtime.manifest.id].installedOnPlatforms[platform.id] ?? false),
+          options,
+        ),
+      ]),
+    ) as Record<string, ComponentAction>;
+
+    if (!options.yes) {
+      const existing = [
+        ...(smartExists && smartAction === 'install' ? ['Smart'] : []),
+        ...runtimes
+          .filter(
+            (runtime) =>
+              detections[runtime.manifest.id].installedOnPlatforms[platform.id] &&
+              integrationActions[runtime.manifest.id] === 'install',
+          )
+          .map((runtime) => runtime.manifest.displayName),
+      ];
+      if (existing.length > 1) {
+        const choice = await promptBulkOverwriteChoice(platform.name, existing, lang);
+        if (choice !== 'choose') {
+          const action = choice === 'overwrite-all' ? 'overwrite' : 'skip';
+          if (smartExists && smartAction === 'install') smartAction = action;
+          for (const runtime of runtimes) {
+            if (
+              detections[runtime.manifest.id].installedOnPlatforms[platform.id] &&
+              integrationActions[runtime.manifest.id] === 'install'
+            ) {
+              integrationActions[runtime.manifest.id] = action;
+            }
+          }
+        }
+      }
+      if (smartExists && smartAction === 'install') {
+        smartAction = await promptOverwriteChoice('Smart', platform.name, lang);
+      }
+      for (const runtime of runtimes) {
+        const id = runtime.manifest.id;
+        if (
+          detections[id].installedOnPlatforms[platform.id] &&
+          integrationActions[id] === 'install'
+        ) {
+          integrationActions[id] = await promptOverwriteChoice(
+            runtime.manifest.displayName,
+            platform.name,
+            lang,
+          );
+        }
+      }
+    }
+    plans.push({ platform, smartAction, integrationActions });
   }
-  if (skipped.length > 0) console.log(`  ${t(lang, 'skippedLabel')} ${skipped.map((r) => r.platform.name).join(', ')}`);
-  if (failed.length > 0) {
-    console.log(`  ${t(lang, 'failedLabel')}`);
-    for (const r of failed) console.log(`    ${r.platform.name} (${failedDetails(r)})`);
+  return plans;
+}
+
+async function selectDependencies(
+  runtimes: IntegrationRuntime[],
+  detections: Record<string, IntegrationDetection>,
+  options: InitOptions,
+): Promise<Set<string>> {
+  if (options.deps === false) return new Set();
+  if (options.yes) {
+    return new Set(
+      runtimes
+        .filter((runtime) => !detections[runtime.manifest.id].dependencyAvailable)
+        .map((runtime) => runtime.manifest.id),
+    );
+  }
+  const selected = await checkbox({
+    message: 'Install workflow dependencies',
+    choices: runtimes.map((runtime) => {
+      const installed = detections[runtime.manifest.id].dependencyAvailable;
+      return {
+        name: `${runtime.manifest.displayName}${installed ? ' (available)' : ''}`,
+        value: runtime.manifest.id,
+        checked: !installed,
+      };
+    }),
+  });
+  return new Set(selected as string[]);
+}
+
+function displaySummary(
+  results: PlatformResult[],
+  runtimes: IntegrationRuntime[],
+  scope: InstallScope,
+  lang: string,
+  workflow: WorkflowResolution['workflow'],
+): void {
+  const scopeLabel = scope === 'global' ? os.homedir() : 'project';
+  console.log(`\n  ${t(lang, 'setupComplete')} (scope: ${scopeLabel})`);
+  console.log(
+    `  Workflow: ${workflow.displayName ?? workflow.id} [${workflow.supportLevel}] ${workflow.digest.slice(0, 12)}`,
+  );
+  for (const result of results) {
+    const integrations = runtimes
+      .map(
+        (runtime) => `${runtime.manifest.displayName}=${result.integrations[runtime.manifest.id]}`,
+      )
+      .join(', ');
+    console.log(`  ${result.platform.name}: Smart=${result.smart}, ${integrations}`);
   }
   if (scope === 'project') console.log(`\n  ${t(lang, 'workingDirs')}`);
   console.log(`\n  ${t(lang, 'getStarted')}`);
@@ -157,117 +320,173 @@ function displaySummary(results: PlatformResult[], scope: InstallScope, lang: st
 export async function initCommand(targetPath: string, options: InitOptions = {}): Promise<void> {
   const projectPath = path.resolve(targetPath);
   const log = options.json ? () => undefined : console.log;
-
   if (!options.json) await printVersionInfo(log);
 
   const language = await selectLanguage(options);
   const lang = language.id;
-  log(`  ${t(lang, 'settingUp')} ${projectPath}\n`);
+  const workflowReference = await selectWorkflowReference(projectPath, options);
+  const integrationEnvironment = await loadProjectIntegrationEnvironment(projectPath);
+  const workflowResolution = await resolveProjectWorkflow(
+    projectPath,
+    workflowReference,
+    integrationEnvironment.registry,
+  );
+  assertValidWorkflow(workflowReference, workflowResolution);
+  const runtimes = Object.keys(workflowResolution.workflow.integrations).map((id) =>
+    integrationEnvironment.runtimes.require(id),
+  );
+
+  log(`  ${t(lang, 'settingUp')} ${projectPath}`);
+  log(
+    `  Workflow: ${workflowResolution.workflow.displayName ?? workflowResolution.workflow.id} [${workflowResolution.workflow.supportLevel}]\n`,
+  );
 
   const detected = await detectPlatforms(projectPath);
-  const detectedIds = new Set(detected.map(p => p.id));
+  const detectedIds = new Set(detected.map((platform) => platform.id));
   const scope = await selectScope(options, lang);
+  if (scope === 'global' && runtimes.some((runtime) => runtime.manifest.management === 'user')) {
+    throw new Error('Local trusted integrations are project-scoped and cannot use global init');
+  }
   const selectedPlatformIds = await selectPlatforms(detectedIds, options, lang);
   if (selectedPlatformIds.length === 0) {
-    if (options.json) { console.log(JSON.stringify({ projectPath, scope, language: language.id, selectedPlatforms: [], results: [] }, null, 2)); return; }
-    log(`\n  ${t(lang, 'noPlatforms')}\n`); return;
-  }
-
-  const selectedPlatforms = PLATFORMS.filter((p) => selectedPlatformIds.includes(p.id));
-  const baseDir = getBaseDir(projectPath, scope);
-  type PlatformPlan = ComponentPlan & { platform: Platform; hasOS: boolean; hasSP: boolean; hasSM: boolean };
-  const plans: PlatformPlan[] = [];
-
-  for (const platform of selectedPlatforms) {
-    const installed = await checkInstalledSkills(platform, baseDir);
-    const hasOS = installed.openspec;
-    const hasSP = installed.superpowers;
-    const hasSM = installed.smart;
-    let osAction = resolveAction(hasOS, options);
-    let spAction = resolveAction(hasSP, options);
-    let smAction = resolveAction(hasSM, options);
-
-    if (!options.yes) {
-      const existingComponents = [
-        hasOS && osAction === 'install' ? 'OpenSpec' : null,
-        hasSP && spAction === 'install' ? 'Superpowers' : null,
-        hasSM && smAction === 'install' ? 'Smart' : null,
-      ].filter((component): component is string => Boolean(component));
-      if (existingComponents.length > 1) {
-        const bulkChoice = await promptBulkOverwriteChoice(platform.name, existingComponents, lang);
-        if (bulkChoice !== 'choose') ({ osAction, spAction, smAction } = applyBulkOverwriteChoice({ osAction, spAction, smAction }, bulkChoice, { os: hasOS, sp: hasSP, sm: hasSM }));
-      }
-      if (osAction === 'install' && hasOS) osAction = await promptOverwriteChoice('OpenSpec', platform.name, lang);
-      if (spAction === 'install' && hasSP) spAction = await promptOverwriteChoice('Superpowers', platform.name, lang);
-      if (smAction === 'install' && hasSM) smAction = await promptOverwriteChoice('Smart', platform.name, lang);
+    if (options.json) {
+      console.log(
+        JSON.stringify(
+          {
+            projectPath,
+            scope,
+            language: language.id,
+            workflow: workflowReference,
+            selectedPlatforms: [],
+            results: [],
+          },
+          null,
+          2,
+        ),
+      );
+      return;
     }
-    plans.push({ platform, osAction, spAction, smAction, hasOS, hasSP, hasSM });
+    log(`\n  ${t(lang, 'noPlatforms')}\n`);
+    return;
   }
 
-  const osToolIds = plans.filter((p) => p.osAction !== 'skip').map((p) => p.platform.openspecToolId);
-  const spPlatformIds = plans.filter((p) => p.spAction !== 'skip').map((p) => p.platform.id);
-  const selectedNpmDeps = await selectNpmDeps(projectPath, spPlatformIds, options, lang);
-  const shouldInstallOpenSpecCli = selectedNpmDeps.has('openspec');
-  const shouldInstallSuperpowers = selectedNpmDeps.has('superpowers');
-  const shouldInstallCodegraphCli = selectedNpmDeps.has('codegraph');
+  const platforms = PLATFORMS.filter((platform) => selectedPlatformIds.includes(platform.id));
+  const baseDir = getBaseDir(projectPath, scope);
+  const detections = await detectIntegrations(
+    runtimes,
+    projectPath,
+    baseDir,
+    scope,
+    selectedPlatformIds,
+  );
+  const plans = await buildPlans(platforms, runtimes, detections, baseDir, scope, options, lang);
+  const dependencies = await selectDependencies(runtimes, detections, options);
 
-  let osGlobalStatus: InstallStatus = 'skipped';
-  if (osToolIds.length > 0) {
-    log(`\n  ${t(lang, 'installingOS')} ${osToolIds.join(', ')}`);
-    osGlobalStatus = await installOpenSpec(projectPath, osToolIds, scope, shouldInstallOpenSpecCli);
-    if (osGlobalStatus === 'skipped' && !shouldInstallOpenSpecCli) log(`  OpenSpec: ${t(lang, 'osSkippedNoCli')}`);
-    else log(`  OpenSpec: ${osGlobalStatus}`);
-  } else { log(`\n  OpenSpec: ${t(lang, 'allSkipped')}`); }
-
-  let spGlobalStatus: InstallStatus = 'skipped';
-  if (spPlatformIds.length > 0) {
-    if (!shouldInstallSuperpowers) log(`\n  Superpowers: ${t(lang, 'spSkippedByUser')}`);
-    else { log(`\n  ${t(lang, 'installingSP')} ${spPlatformIds.join(', ')}`); spGlobalStatus = await installSuperpowersForPlatforms(projectPath, scope, spPlatformIds, true); log(`  Superpowers: ${spGlobalStatus}`); }
-  } else { log(`\n  Superpowers: ${t(lang, 'allSkipped')}`); }
+  const integrationStatuses: Record<string, Record<string, IntegrationInstallStatus>> = {};
+  for (const runtime of runtimes) {
+    const id = runtime.manifest.id;
+    const platformIds = plans
+      .filter((plan) => plan.integrationActions[id] !== 'skip')
+      .map((plan) => plan.platform.id);
+    integrationStatuses[id] = Object.fromEntries(
+      selectedPlatformIds.map((platformId) => [platformId, 'skipped']),
+    );
+    if (platformIds.length === 0) {
+      log(`  ${runtime.manifest.displayName}: skipped`);
+      continue;
+    }
+    log(`\n  Installing ${runtime.manifest.displayName}: ${platformIds.join(', ')}`);
+    const result = await runtime.install({
+      projectPath,
+      baseDir,
+      scope,
+      platformIds,
+      installDependency: dependencies.has(id),
+    });
+    Object.assign(integrationStatuses[id], result.platformStatuses);
+    log(
+      `  ${runtime.manifest.displayName}: ${result.status}${result.message ? ` (${result.message})` : ''}`,
+    );
+  }
 
   const results: PlatformResult[] = [];
   for (const plan of plans) {
-    const { platform, smAction } = plan;
-    const platformSkillsDir = getPlatformSkillsDir(platform, scope);
-    const skillsPath = `${scope === 'global' ? '~/' : ''}${platformSkillsDir}/skills/`;
-    let smStatus: InstallStatus = 'skipped';
-    if (smAction !== 'skip') {
-      const { copied } = await copySmartSkillsForPlatform(baseDir, platform, smAction === 'overwrite', language.skillsDir, scope);
-      smStatus = copied > 0 ? 'installed' : 'skipped';
-      log(`  Smart -> ${platform.name}: ${smStatus} (${copied} files) -> ${skillsPath}`);
-    } else { log(`  Smart -> ${platform.name}: skipped (${t(lang, 'alreadyExists')})`); }
-
-    if (smAction !== 'skip') {
-      const { copied: ruleCopied } = await copySmartRulesForPlatform(baseDir, platform, smAction === 'overwrite', scope);
-      if (ruleCopied > 0) log(`  Smart rules -> ${platform.name}: ${ruleCopied} ${t(lang, 'rulesInstalled')}`);
+    let smartStatus: IntegrationInstallStatus = 'skipped';
+    if (plan.smartAction !== 'skip') {
+      const { copied } = await copySmartSkillsForPlatform(
+        baseDir,
+        plan.platform,
+        plan.smartAction === 'overwrite',
+        language.skillsDir,
+        scope,
+      );
+      smartStatus = copied > 0 ? 'installed' : 'skipped';
+      log(`  Smart -> ${plan.platform.name}: ${smartStatus} (${copied} files)`);
+      const { copied: ruleCopied } = await copySmartRulesForPlatform(
+        baseDir,
+        plan.platform,
+        plan.smartAction === 'overwrite',
+        scope,
+      );
+      if (ruleCopied > 0)
+        log(`  Smart rules -> ${plan.platform.name}: ${ruleCopied} ${t(lang, 'rulesInstalled')}`);
+      if (plan.platform.supportsHooks) {
+        const { installed, reason } = await installSmartHooksForPlatform(
+          baseDir,
+          plan.platform,
+          scope,
+        );
+        if (installed) log(`  Smart hooks -> ${plan.platform.name}: ${t(lang, 'hooksInstalled')}`);
+        else if (reason)
+          log(`  Smart hooks -> ${plan.platform.name}: ${t(lang, 'hooksSkipped')} (${reason})`);
+      }
     }
-    if (smAction !== 'skip' && platform.supportsHooks) {
-      const { installed, reason } = await installSmartHooksForPlatform(baseDir, platform, scope);
-      if (installed) log(`  Smart hooks -> ${platform.name}: ${t(lang, 'hooksInstalled')}`);
-      else if (reason) log(`  Smart hooks -> ${platform.name}: ${t(lang, 'hooksSkipped')} (${reason})`);
-    }
-    results.push({ platform, openspec: osToolIds.includes(platform.openspecToolId) ? osGlobalStatus : 'skipped', superpowers: plan.spAction !== 'skip' ? spGlobalStatus : 'skipped', smart: smStatus, codegraph: 'skipped' });
+    results.push({
+      platform: plan.platform,
+      smart: smartStatus,
+      integrations: Object.fromEntries(
+        runtimes.map((runtime) => [
+          runtime.manifest.id,
+          integrationStatuses[runtime.manifest.id][plan.platform.id] ?? 'skipped',
+        ]),
+      ),
+    });
   }
 
-  const codegraphAlreadyIndexed = await hasCodegraphProjectIndex(projectPath);
-  const shouldInstallCodegraph = !options.json && !codegraphAlreadyIndexed && shouldInstallCodegraphCli;
-  if (shouldInstallCodegraph) {
-    log(`\n  ${t(lang, 'installingCG')}`);
-    const codegraphInstalled = installCodegraph(scope ?? 'project', projectPath);
-    const cgGlobalStatus: InstallStatus = codegraphInstalled ? 'installed' : 'failed';
-    log(`  CodeGraph: ${cgGlobalStatus}`);
-    for (const r of results) r.codegraph = cgGlobalStatus;
-  } else if (!options.json && codegraphAlreadyIndexed) { log('\n  CodeGraph: skipped (existing .codegraph index detected)'); }
-  else if (!options.json) { log(`\n  CodeGraph: ${t(lang, 'cgSkippedByUser')}`); }
-
-  if (scope === 'project') await createWorkingDirs(projectPath, language.id);
+  if (scope === 'project') {
+    await createWorkingDirs(projectPath, language.id, selectedPlatformIds);
+    await setProjectWorkflow(projectPath, workflowReference, workflowResolution);
+  }
 
   if (options.json) {
-    console.log(JSON.stringify({ projectPath, scope, language: language.id, selectedPlatforms: selectedPlatformIds, results: results.map((result) => ({ platform: result.platform.id, platformName: result.platform.name, openspec: result.openspec, superpowers: result.superpowers, smart: result.smart, codegraph: result.codegraph })), workingDirsCreated: scope === 'project' }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          projectPath,
+          scope,
+          language: language.id,
+          workflow: {
+            source: workflowReference,
+            id: workflowResolution.workflow.id,
+            supportLevel: workflowResolution.workflow.supportLevel,
+            digest: workflowResolution.workflow.digest,
+          },
+          selectedPlatforms: selectedPlatformIds,
+          results: results.map((result) => ({
+            platform: result.platform.id,
+            platformName: result.platform.name,
+            smart: result.smart,
+            integrations: result.integrations,
+          })),
+          workingDirsCreated: scope === 'project',
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
-  displaySummary(results, scope, lang);
+  displaySummary(results, runtimes, scope, lang, workflowResolution.workflow);
 }
 
-export { applyBulkOverwriteChoice };
 export type { TranslationKey };

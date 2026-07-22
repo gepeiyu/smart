@@ -17,15 +17,10 @@ export function smartYamlPath(projectPath: string, changeName: string): string {
   return path.join(smartChangeDir(projectPath, changeName), '.smart.yaml');
 }
 
-export function openSpecChangesDir(projectPath: string): string {
-  return path.join(projectPath, 'openspec', 'changes');
-}
-
-export function openSpecChangeDir(projectPath: string, changeName: string): string {
-  return path.join(openSpecChangesDir(projectPath), changeName);
-}
-
-export async function resolveSmartYamlPath(projectPath: string, changeName: string): Promise<string | null> {
+export async function resolveSmartYamlPath(
+  projectPath: string,
+  changeName: string,
+): Promise<string | null> {
   const current = smartYamlPath(projectPath, changeName);
   if (await fileExists(current)) return current;
 

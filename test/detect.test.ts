@@ -6,7 +6,12 @@ vi.mock('../src/utils/file-system.js', () => ({
 }));
 
 import { fileExists, readDir } from '../src/utils/file-system.js';
-import { detectPlatforms, detectGlobalPlatforms, checkInstalledSkills, hasSkills, getBaseDir } from '../src/core/detect.js';
+import {
+  detectPlatforms,
+  detectGlobalPlatforms,
+  hasSmartSkills,
+  getBaseDir,
+} from '../src/core/detect.js';
 import { PLATFORMS } from '../src/core/platforms.js';
 
 describe('detect', () => {
@@ -25,7 +30,7 @@ describe('detect', () => {
       vi.mocked(fileExists).mockImplementation(async (p: string) => p.includes('.claude'));
       const result = await detectPlatforms('/project');
       expect(result.length).toBeGreaterThanOrEqual(1);
-      expect(result.some(p => p.id === 'claude')).toBe(true);
+      expect(result.some((p) => p.id === 'claude')).toBe(true);
     });
   });
 
@@ -42,34 +47,20 @@ describe('detect', () => {
     it('detects platforms with existing globalSkillsDir', async () => {
       vi.mocked(fileExists).mockImplementation(async (p: string) => p.includes('.claude'));
       const result = await detectGlobalPlatforms();
-      expect(result.some(p => p.id === 'claude')).toBe(true);
+      expect(result.some((p) => p.id === 'claude')).toBe(true);
     });
   });
 
-  describe('checkInstalledSkills', () => {
-    it('detects installed skill types from directory names', async () => {
-      vi.mocked(readDir).mockResolvedValue(['openspec', 'superpowers', 'smart']);
-      const result = await checkInstalledSkills(PLATFORMS[0], '/project');
-      expect(result).toEqual({ openspec: true, superpowers: true, smart: true });
-    });
-
-    it('handles case-insensitive matching', async () => {
-      vi.mocked(readDir).mockResolvedValue(['OpenSpec', 'SUPERPOWERS', 'SMART']);
-      const result = await checkInstalledSkills(PLATFORMS[0], '/project');
-      expect(result).toEqual({ openspec: true, superpowers: true, smart: true });
-    });
-  });
-
-  describe('hasSkills', () => {
+  describe('hasSmartSkills', () => {
     it('returns true when smart skills exist', async () => {
       vi.mocked(readDir).mockResolvedValue(['smart']);
-      const result = await hasSkills(PLATFORMS[0], '/project');
+      const result = await hasSmartSkills(PLATFORMS[0], '/project');
       expect(result).toBe(true);
     });
 
     it('returns false when no smart skills', async () => {
       vi.mocked(readDir).mockResolvedValue(['openspec']);
-      const result = await hasSkills(PLATFORMS[0], '/project');
+      const result = await hasSmartSkills(PLATFORMS[0], '/project');
       expect(result).toBe(false);
     });
   });

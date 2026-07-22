@@ -1,31 +1,82 @@
 export type Language = 'en' | 'zh';
 
 export type TranslationKey =
-  | 'settingUp' | 'installScope' | 'scopeProject' | 'scopeGlobal'
-  | 'languagePrompt' | 'selectPlatforms' | 'selectedPlatforms' | 'noneSelected'
-  | 'selectPlatformsRequired' | 'selectPlatformsHelp' | 'selectPlatformsNoDetected' | 'detected' | 'noPlatforms'
-  | 'overwriteChoice' | 'overwrite' | 'skip'
-  | 'bulkOverwrite' | 'overwriteAll' | 'skipAll' | 'choosePer'
-  | 'installingOS' | 'osSkippedNoCli' | 'allSkipped'
-  | 'installingSP' | 'spSkippedByUser' | 'alreadyExists'
-  | 'rulesInstalled' | 'hooksInstalled' | 'hooksSkipped'
-  | 'installCodegraph' | 'codegraphYes' | 'codegraphNo'
-  | 'installingCG' | 'cgSkippedByUser'
-  | 'setupComplete' | 'installed' | 'skippedLabel' | 'failedLabel' | 'failedStatus'
-  | 'workingDirs' | 'getStarted'
-  | 'getStartedSmart' | 'getStartedBugfix' | 'getStartedQuick'
+  | 'settingUp'
+  | 'installScope'
+  | 'scopeProject'
+  | 'scopeGlobal'
+  | 'languagePrompt'
+  | 'selectPlatforms'
+  | 'selectedPlatforms'
+  | 'noneSelected'
+  | 'selectPlatformsRequired'
+  | 'selectPlatformsHelp'
+  | 'selectPlatformsNoDetected'
+  | 'detected'
+  | 'noPlatforms'
+  | 'overwriteChoice'
+  | 'overwrite'
+  | 'skip'
+  | 'bulkOverwrite'
+  | 'overwriteAll'
+  | 'skipAll'
+  | 'choosePer'
+  | 'installingOS'
+  | 'osSkippedNoCli'
+  | 'allSkipped'
+  | 'installingSP'
+  | 'spSkippedByUser'
+  | 'alreadyExists'
+  | 'rulesInstalled'
+  | 'hooksInstalled'
+  | 'hooksSkipped'
+  | 'installCodegraph'
+  | 'codegraphYes'
+  | 'codegraphNo'
+  | 'installingCG'
+  | 'cgSkippedByUser'
+  | 'setupComplete'
+  | 'installed'
+  | 'skippedLabel'
+  | 'failedLabel'
+  | 'failedStatus'
+  | 'workingDirs'
+  | 'getStarted'
+  | 'getStartedSmart'
+  | 'getStartedBugfix'
+  | 'getStartedQuick'
   | 'selectNpmDeps'
-  | 'npmDepOpenSpec' | 'npmDepOpenSpecInstalled'
-  | 'npmDepSuperpowers' | 'npmDepSuperpowersInstalled' | 'npmDepSuperpowersHint'
-  | 'npmDepCodegraph' | 'npmDepCodegraphInstalled' | 'npmDepNotInstalled'
-  | 'updateTitle' | 'updatingNpmPackage'
-  | 'npmLaunchFailed' | 'npmUpdateFailed' | 'npmNetworkHint'
-  | 'npmPackageUpdated' | 'npmPackageFailed'
-  | 'noInstallsFound' | 'updatingSkillsOnTargets' | 'copyingSkillsFiles'
-  | 'skillsCopiedSkipped' | 'rulesUpdated' | 'rulesFailed'
-  | 'hooksUpdated' | 'hooksFailed'
-  | 'summary' | 'summaryNpm' | 'summarySkills' | 'summaryCodegraph' | 'summaryScope' | 'summaryLanguage'
-  | 'updateComplete' | 'cancelled';
+  | 'npmDepOpenSpec'
+  | 'npmDepOpenSpecInstalled'
+  | 'npmDepSuperpowers'
+  | 'npmDepSuperpowersInstalled'
+  | 'npmDepSuperpowersHint'
+  | 'npmDepCodegraph'
+  | 'npmDepCodegraphInstalled'
+  | 'npmDepNotInstalled'
+  | 'updateTitle'
+  | 'updatingNpmPackage'
+  | 'npmLaunchFailed'
+  | 'npmUpdateFailed'
+  | 'npmNetworkHint'
+  | 'npmPackageUpdated'
+  | 'npmPackageFailed'
+  | 'noInstallsFound'
+  | 'updatingSkillsOnTargets'
+  | 'copyingSkillsFiles'
+  | 'skillsCopiedSkipped'
+  | 'rulesUpdated'
+  | 'rulesFailed'
+  | 'hooksUpdated'
+  | 'hooksFailed'
+  | 'summary'
+  | 'summaryNpm'
+  | 'summarySkills'
+  | 'summaryCodegraph'
+  | 'summaryScope'
+  | 'summaryLanguage'
+  | 'updateComplete'
+  | 'cancelled';
 
 const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -68,11 +119,13 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     skippedLabel: 'Skipped:',
     failedLabel: 'Failed:',
     failedStatus: 'failed',
-    workingDirs: 'Working directories: smartdocs/changes/, docs/superpowers/specs/, docs/superpowers/plans/',
+    workingDirs: 'Working directories: .smart/workflows/, smartdocs/changes/, smartdocs/workflows/',
     getStarted: 'Get started:',
     getStartedSmart: '/smart "your idea"  — Start a new change with full workflow',
-    getStartedBugfix: '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
-    getStartedQuick: '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
+    getStartedBugfix:
+      '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
+    getStartedQuick:
+      '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
     selectNpmDeps: 'Select npm dependencies to install/upgrade:',
     npmDepOpenSpec: 'OpenSpec CLI (@fission-ai/openspec@latest)',
     npmDepOpenSpecInstalled: 'OpenSpec CLI (already installed — upgrade to latest)',
@@ -146,11 +199,13 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     skippedLabel: '已跳过：',
     failedLabel: '失败：',
     failedStatus: '失败',
-    workingDirs: '工作目录：smartdocs/changes/, docs/superpowers/specs/, docs/superpowers/plans/',
+    workingDirs: '工作目录：.smart/workflows/、smartdocs/changes/、smartdocs/workflows/',
     getStarted: '开始使用：',
     getStartedSmart: '/smart "你的想法"  — 启动完整工作流',
-    getStartedBugfix: '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
-    getStartedQuick: '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
+    getStartedBugfix:
+      '/smart-bugfix       — Smart Bug修复模式 - 根因分析 → Build → Verify → Archive',
+    getStartedQuick:
+      '/smart-quick        — Smart 快捷模式 — 跳过 Brainstorming 和 Plan，直接进行快捷的Build和Verify',
     selectNpmDeps: '选择要安装/升级的 npm 依赖：',
     npmDepOpenSpec: 'OpenSpec CLI (@fission-ai/openspec@latest)',
     npmDepOpenSpecInstalled: 'OpenSpec CLI（已安装 — 升级到最新版本）',
